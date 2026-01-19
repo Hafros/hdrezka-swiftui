@@ -11,7 +11,7 @@
 		04B25FD82BA46F9C00200341 /* Algorithms in Frameworks */ = {isa = PBXBuildFile; productRef = 04B25FD72BA46F9C00200341 /* Algorithms */; };
 		04B3CA8A2BA06CAC0039F76E /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 04B3CA892BA06CAC0039F76E /* SwiftSoup */; };
 		04E5DC0A2C120C4200BF1B7A /* Flow in Frameworks */ = {isa = PBXBuildFile; productRef = 04E5DC092C120C4200BF1B7A /* Flow */; };
-		04E9EB462C047F19001CBBCA /* YouTubePlayerKit in Frameworks */ = {isa = PBXBuildFile; productRef = 04E9EB452C047F19001CBBCA /* YouTubePlayerKit */; };
+		0F09A5872F190B9800E86182 /* YouTubeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 0F09A5862F190B9800E86182 /* YouTubeKit */; };
 		DE188EE52CA6AB3100E7B1AE /* Pow in Frameworks */ = {isa = PBXBuildFile; productRef = DE188EE42CA6AB3100E7B1AE /* Pow */; };
 		DE2D67382DC3D5E900A9187C /* LicensesList in Frameworks */ = {isa = PBXBuildFile; productRef = DE2D67372DC3D5E900A9187C /* LicensesList */; };
 		DE3DCCE62DFB92050062CF81 /* SwiftFormat in Frameworks */ = {isa = PBXBuildFile; productRef = DE3DCCE52DFB92050062CF81 /* SwiftFormat */; };
@@ -38,11 +38,14 @@
 				macOS/Resources/Info.plist,
 			);
 			platformFiltersByRelativePath = {
-				iOS/Core/AppState.swift = (ios, );
-				iOS/Core/Const.swift = (ios, );
-				iOS/Core/Container.swift = (ios, );
-				iOS/Core/Defaults.swift = (ios, );
+				"iOS/Core/AppState+Destinations.swift" = (ios, );
+				iOS/Core/AppState.swift = (ios, tvos, );
+				iOS/Core/Const.swift = (ios, tvos, );
+				iOS/Core/Container.swift = (ios, tvos, );
+				iOS/Core/Defaults.swift = (ios, tvos, );
 				iOS/Core/Downloader.swift = (ios, );
+				"iOS/Core/Tabs+Views.swift" = (ios, );
+				iOS/Core/Tabs.swift = (ios, tvos, );
 				iOS/Domain/Entities/Download.swift = (ios, );
 				iOS/Domain/Entities/DownloadData.swift = (ios, );
 				iOS/Domain/Entities/ExternalPlayers.swift = (ios, );
@@ -163,6 +166,8 @@
 				macOS/Utils/NSImage.swift = (macos, );
 				macOS/Utils/RemoveBackgroundImageProcessor.swift = (macos, );
 				macOS/Utils/WindowAccessor.swift = (macos, );
+				tvOS/DetailsView.swift = (tvos, );
+				tvOS/HDrezkaApp.swift = (tvos, );
 			};
 			target = 04B3CA732BA06C9C0039F76E /* HDrezka */;
 		};
@@ -187,7 +192,6 @@
 				DEB035BA2C89E57A004ABFA1 /* Defaults in Frameworks */,
 				DE3DCCE62DFB92050062CF81 /* SwiftFormat in Frameworks */,
 				043A2B722C036C7C0057721E /* OrderedCollections in Frameworks */,
-				04E9EB462C047F19001CBBCA /* YouTubePlayerKit in Frameworks */,
 				04B25FD82BA46F9C00200341 /* Algorithms in Frameworks */,
 				DEB035B52C89E1DB004ABFA1 /* FirebaseAnalytics in Frameworks */,
 				04B3CA8A2BA06CAC0039F76E /* SwiftSoup in Frameworks */,
@@ -197,6 +201,7 @@
 				DE188EE52CA6AB3100E7B1AE /* Pow in Frameworks */,
 				04E5DC0A2C120C4200BF1B7A /* Flow in Frameworks */,
 				DEF920382DD5CAF20087C32C /* FactoryKit in Frameworks */,
+				0F09A5872F190B9800E86182 /* YouTubeKit in Frameworks */,
 				DEB035B72C89E1DB004ABFA1 /* FirebaseCrashlytics in Frameworks */,
 				DE2D67382DC3D5E900A9187C /* LicensesList in Frameworks */,
 				DE7608DA2EB4231600C4A23E /* LRUCache in Frameworks */,
@@ -248,7 +253,6 @@
 				04B3CA892BA06CAC0039F76E /* SwiftSoup */,
 				04B25FD72BA46F9C00200341 /* Algorithms */,
 				043A2B712C036C7C0057721E /* OrderedCollections */,
-				04E9EB452C047F19001CBBCA /* YouTubePlayerKit */,
 				04E5DC092C120C4200BF1B7A /* Flow */,
 				DEE64D0A2C8869D0002C2F2F /* Sparkle */,
 				DEB035B42C89E1DB004ABFA1 /* FirebaseAnalytics */,
@@ -261,6 +265,7 @@
 				DE3DCCE52DFB92050062CF81 /* SwiftFormat */,
 				DE4AD63D2EAA4A7200CE7AB3 /* Kingfisher */,
 				DE7608D92EB4231600C4A23E /* LRUCache */,
+				0F09A5862F190B9800E86182 /* YouTubeKit */,
 			);
 			productName = HDRezka;
 			productReference = 04B3CA742BA06C9C0039F76E /* HDrezka.app */;
@@ -295,7 +300,6 @@
 				04B3CA882BA06CAC0039F76E /* XCRemoteSwiftPackageReference "SwiftSoup" */,
 				04B25FD62BA46F9C00200341 /* XCRemoteSwiftPackageReference "swift-algorithms" */,
 				043A2B702C036C7C0057721E /* XCRemoteSwiftPackageReference "swift-collections" */,
-				04E9EB442C047F19001CBBCA /* XCRemoteSwiftPackageReference "YouTubePlayerKit" */,
 				04E5DC082C120C4200BF1B7A /* XCRemoteSwiftPackageReference "SwiftUI-Flow" */,
 				DEE64D092C8869D0002C2F2F /* XCRemoteSwiftPackageReference "Sparkle" */,
 				DEB035B32C89E1DB004ABFA1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
@@ -306,6 +310,7 @@
 				DE3DCCE42DFB92050062CF81 /* XCRemoteSwiftPackageReference "SwiftFormat" */,
 				DE4AD63C2EAA4A7200CE7AB3 /* XCRemoteSwiftPackageReference "Kingfisher" */,
 				DE7608D82EB4231600C4A23E /* XCRemoteSwiftPackageReference "LRUCache" */,
+				0F09A5852F190B9800E86182 /* XCRemoteSwiftPackageReference "YouTubeKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 04B3CA752BA06C9C0039F76E /* Products */;
@@ -534,7 +539,7 @@
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = 68ZUK4XR7F;
+				DEVELOPMENT_TEAM = CSUMQW9GVR;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_FILE_ACCESS_DOWNLOADS_FOLDER = readwrite;
 				ENABLE_INCOMING_NETWORK_CONNECTIONS = YES;
@@ -574,11 +579,12 @@
 				PRODUCT_BUNDLE_IDENTIFIER = io.silentsea.hdrezka;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 2;
+				TARGETED_DEVICE_FAMILY = "2,3";
+				TVOS_DEPLOYMENT_TARGET = 18.6;
 			};
 			name = Debug;
 		};
@@ -642,11 +648,12 @@
 				PRODUCT_BUNDLE_IDENTIFIER = io.silentsea.hdrezka;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = auto;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTED_PLATFORMS = "appletvos appletvsimulator iphoneos iphonesimulator macosx";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 2;
+				TARGETED_DEVICE_FAMILY = "2,3";
+				TVOS_DEPLOYMENT_TARGET = 18.6;
 			};
 			name = Release;
 		};
@@ -710,13 +717,12 @@
 				minimumVersion = 0.0.1;
 			};
 		};
-		04E9EB442C047F19001CBBCA /* XCRemoteSwiftPackageReference "YouTubePlayerKit" */ = {
+		0F09A5852F190B9800E86182 /* XCRemoteSwiftPackageReference "YouTubeKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/SvenTiigi/YouTubePlayerKit.git";
+			repositoryURL = "https://github.com/alexeichhorn/YouTubeKit";
 			requirement = {
-				kind = versionRange;
-				maximumVersion = 999.0.0;
-				minimumVersion = 0.0.1;
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.4.0;
 			};
 		};
 		DE188EE32CA6AB3100E7B1AE /* XCRemoteSwiftPackageReference "Pow" */ = {
@@ -823,10 +829,10 @@
 			package = 04E5DC082C120C4200BF1B7A /* XCRemoteSwiftPackageReference "SwiftUI-Flow" */;
 			productName = Flow;
 		};
-		04E9EB452C047F19001CBBCA /* YouTubePlayerKit */ = {
+		0F09A5862F190B9800E86182 /* YouTubeKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 04E9EB442C047F19001CBBCA /* XCRemoteSwiftPackageReference "YouTubePlayerKit" */;
-			productName = YouTubePlayerKit;
+			package = 0F09A5852F190B9800E86182 /* XCRemoteSwiftPackageReference "YouTubeKit" */;
+			productName = YouTubeKit;
 		};
 		DE188EE42CA6AB3100E7B1AE /* Pow */ = {
 			isa = XCSwiftPackageProductDependency;

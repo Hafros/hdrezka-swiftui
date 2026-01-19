@@ -20,19 +20,21 @@ class Downloader {
     var downloads: [Download] = []
 
     init() {
-        let open = UNNotificationAction(identifier: "open", title: String(localized: "key.open.gallery"))
-        let openCategory = UNNotificationCategory(identifier: "open", actions: [open], intentIdentifiers: [])
+        #if os(iOS)
+            let open = UNNotificationAction(identifier: "open", title: String(localized: "key.open.gallery"))
+            let openCategory = UNNotificationCategory(identifier: "open", actions: [open], intentIdentifiers: [])
 
-        let cancel = UNNotificationAction(identifier: "cancel", title: String(localized: "key.cancel"))
-        let cancelCategory = UNNotificationCategory(identifier: "cancel", actions: [cancel], intentIdentifiers: [])
+            let cancel = UNNotificationAction(identifier: "cancel", title: String(localized: "key.cancel"))
+            let cancelCategory = UNNotificationCategory(identifier: "cancel", actions: [cancel], intentIdentifiers: [])
 
-        let retry = UNNotificationAction(identifier: "retry", title: String(localized: "key.retry"))
-        let retryCategory = UNNotificationCategory(identifier: "retry", actions: [retry], intentIdentifiers: [])
+            let retry = UNNotificationAction(identifier: "retry", title: String(localized: "key.retry"))
+            let retryCategory = UNNotificationCategory(identifier: "retry", actions: [retry], intentIdentifiers: [])
 
-        let needPremium = UNNotificationAction(identifier: "need_premium", title: String(localized: "key.buy"))
-        let needPremiumCategory = UNNotificationCategory(identifier: "need_premium", actions: [needPremium], intentIdentifiers: [])
+            let needPremium = UNNotificationAction(identifier: "need_premium", title: String(localized: "key.buy"))
+            let needPremiumCategory = UNNotificationCategory(identifier: "need_premium", actions: [needPremium], intentIdentifiers: [])
 
-        UNUserNotificationCenter.current().setNotificationCategories([openCategory, cancelCategory, retryCategory, needPremiumCategory])
+            UNUserNotificationCenter.current().setNotificationCategories([openCategory, cancelCategory, retryCategory, needPremiumCategory])
+        #endif
     }
 
     func setModelContext(modelContext: ModelContext) {
@@ -40,28 +42,30 @@ class Downloader {
     }
 
     private func notificate(_ id: String, _ title: String, _ subtitle: String? = nil, _ category: String? = nil, _ userInfo: [AnyHashable: Any] = [:]) async {
-        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        #if os(iOS)
+            let settings = await UNUserNotificationCenter.current().notificationSettings()
 
-        if settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional {
-            let content = UNMutableNotificationContent()
-            content.title = title
-            if let subtitle, !subtitle.isEmpty {
-                content.subtitle = subtitle
-            }
-            content.sound = UNNotificationSound.default
-            if let category, !category.isEmpty {
-                content.categoryIdentifier = category
-            }
-            content.userInfo = userInfo
+            if settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional {
+                let content = UNMutableNotificationContent()
+                content.title = title
+                if let subtitle, !subtitle.isEmpty {
+                    content.subtitle = subtitle
+                }
+                content.sound = UNNotificationSound.default
+                if let category, !category.isEmpty {
+                    content.categoryIdentifier = category
+                }
+                content.userInfo = userInfo
 
-            let request = UNNotificationRequest(identifier: id, content: content, trigger: nil)
+                let request = UNNotificationRequest(identifier: id, content: content, trigger: nil)
 
-            try? await UNUserNotificationCenter.current().add(request)
-        } else if settings.authorizationStatus == .notDetermined {
-            if let granted = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]), granted {
-                await notificate(id, title, subtitle, category, userInfo)
+                try? await UNUserNotificationCenter.current().add(request)
+            } else if settings.authorizationStatus == .notDetermined {
+                if let granted = try? await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]), granted {
+                    await notificate(id, title, subtitle, category, userInfo)
+                }
             }
-        }
+        #endif
     }
 
     @ObservationIgnored

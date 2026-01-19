@@ -1,7 +1,6 @@
 import Combine
 import FactoryKit
 import SwiftUI
-import YouTubePlayerKit
 
 @Observable
 class DetailsViewModel {

@@ -203,7 +203,7 @@ class AttributedTextStyle {
             attributes[.paragraphStyle] = paragraphStyle
         }
 
-    #elseif os(iOS)
+    #elseif os(iOS) || os(tvOS)
 
         func font(
             bold: Bool = false,
