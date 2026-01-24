@@ -12,7 +12,7 @@
 		04B3CA8A2BA06CAC0039F76E /* SwiftSoup in Frameworks */ = {isa = PBXBuildFile; productRef = 04B3CA892BA06CAC0039F76E /* SwiftSoup */; };
 		04E5DC0A2C120C4200BF1B7A /* Flow in Frameworks */ = {isa = PBXBuildFile; productRef = 04E5DC092C120C4200BF1B7A /* Flow */; };
 		0F09A5872F190B9800E86182 /* YouTubeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 0F09A5862F190B9800E86182 /* YouTubeKit */; };
-		0FE750EA2F2511AE00C54AE9 /* YouTubePlayerKit in Frameworks */ = {isa = PBXBuildFile; productRef = 0FE750E92F2511AE00C54AE9 /* YouTubePlayerKit */; };
+		0FE750EA2F2511AE00C54AE9 /* YouTubePlayerKit in Frameworks */ = {isa = PBXBuildFile; platformFilters = (ios, macos, ); productRef = 0FE750E92F2511AE00C54AE9 /* YouTubePlayerKit */; };
 		DE188EE52CA6AB3100E7B1AE /* Pow in Frameworks */ = {isa = PBXBuildFile; productRef = DE188EE42CA6AB3100E7B1AE /* Pow */; };
 		DE2D67382DC3D5E900A9187C /* LicensesList in Frameworks */ = {isa = PBXBuildFile; productRef = DE2D67372DC3D5E900A9187C /* LicensesList */; };
 		DE3DCCE62DFB92050062CF81 /* SwiftFormat in Frameworks */ = {isa = PBXBuildFile; productRef = DE3DCCE52DFB92050062CF81 /* SwiftFormat */; };
