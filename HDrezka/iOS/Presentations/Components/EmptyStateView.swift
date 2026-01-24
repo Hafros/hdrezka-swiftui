@@ -35,7 +35,9 @@ struct EmptyStateView: View {
                 }
                 .buttonStyle(.bordered)
                 .buttonBorderShape(.roundedRectangle(radius: 6))
-                .keyboardShortcut("r", modifiers: .command)
+                #if os(iOS)
+                    .keyboardShortcut("r", modifiers: .command)
+                #endif
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

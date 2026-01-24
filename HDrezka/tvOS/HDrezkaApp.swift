@@ -17,8 +17,8 @@ import UserNotifications
 
 @main
 struct HDrezkaApp: App {
-//    @State private var appState: AppState = .shared
-//    @State private var downloader: Downloader = .shared
+    @State private var appState: AppState = .shared
+    @State private var downloader: Downloader = .shared
     @State private var cookiesManager: CookiesManager = .shared
 
     @State private var modelContainer: ModelContainer
@@ -33,7 +33,7 @@ struct HDrezkaApp: App {
             modelContainer.mainContext.autosaveEnabled = true
             self.modelContainer = modelContainer
 
-//            Downloader.shared.setModelContext(modelContext: modelContainer.mainContext)
+            Downloader.shared.setModelContext(modelContext: modelContainer.mainContext)
 
             let cache = ImageCache.default
 
@@ -56,8 +56,8 @@ struct HDrezkaApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
-//                .environment(appState)
-//                .environment(downloader)
+                .environment(appState)
+                .environment(downloader)
                 .environment(cookiesManager)
                 .preferredColorScheme(theme.scheme)
         }

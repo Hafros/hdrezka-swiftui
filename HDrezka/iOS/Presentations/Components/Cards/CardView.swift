@@ -93,15 +93,15 @@ struct CardView: View {
                 }
             }
             .contentShape(.rect(topLeadingRadius: 6, topTrailingRadius: 6))
-            .viewModifier { view in
-                #if os(iOS)
+            #if os(iOS)
+                .viewModifier { view in
                     if draggable {
                         view.draggable(movie)
                     } else {
                         view
                     }
-                #endif
-            }
+                }
+            #endif
         }
         .buttonStyle(.plain)
     }
