@@ -177,6 +177,11 @@
 				tvOS/Presentations/CategoriesView.swift = (tvos, );
 				tvOS/Presentations/CollectionsView.swift = (tvos, );
 				tvOS/Presentations/Components/Cards/CardView.swift = (tvos, );
+				tvOS/Presentations/Components/OnPressButtonStyle.swift = (tvos, );
+				tvOS/Presentations/Components/Player/CustomAVPlayer.swift = (tvos, );
+				tvOS/Presentations/Components/Player/PlayerView.swift = (tvos, );
+				tvOS/Presentations/Components/Player/SliderWithText.swift = (tvos, );
+				tvOS/Presentations/Components/Player/SliderWithoutText.swift = (tvos, );
 				tvOS/Presentations/DetailsView/DetailsView.swift = (tvos, );
 				tvOS/Presentations/DetailsView/DetailsViewComponent.swift = (tvos, );
 				tvOS/Presentations/DetailsView/DetailsViewTrailerViewModel.swift = (tvos, );

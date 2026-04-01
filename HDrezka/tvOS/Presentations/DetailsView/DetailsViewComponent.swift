@@ -129,10 +129,10 @@ struct DetailsViewComponent: View {
                                         .presentationDetents([.large])
                                         .presentationDragIndicator(.visible)
                                 }
-//                                .fullScreenCover(item: $playerData) { data in
-//                                    PlayerView(data: data)
-//                                        .analyticsScreen(name: "player", class: "PlayerView")
-//                                }
+                                .fullScreenCover(item: $playerData) { data in
+                                    PlayerView(data: data)
+                                        .analyticsScreen(name: "player", class: "PlayerView")
+                                }
 
 //                                if downloader.isRunning {
 //                                    Button {
