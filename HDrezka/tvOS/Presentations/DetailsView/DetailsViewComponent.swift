@@ -125,6 +125,9 @@ struct DetailsViewComponent: View {
                                 .buttonStyle(.plain)
                                 .sheet(isPresented: $isPlayPresented) {
                                     WatchSheetView(id: details.movieId, playerData: $playerData)
+                                        .presentationSizing(.fitted)
+                                        .presentationDetents([.large])
+                                        .presentationDragIndicator(.visible)
                                 }
 //                                .fullScreenCover(item: $playerData) { data in
 //                                    PlayerView(data: data)

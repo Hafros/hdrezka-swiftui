@@ -13,6 +13,14 @@ import SwiftData
 import SwiftUI
 
 struct WatchSheetView: View {
+    private enum FocusTarget: Hashable {
+        case acting(UUID)
+        case season(UUID)
+        case episode(UUID)
+        case quality(String)
+        case play
+    }
+
     @Injected(\.getMovieDetailsUseCase) private var getMovieDetailsUseCase
     @Injected(\.getMovieVideoUseCase) private var getMovieVideoUseCase
     @Injected(\.getSeriesSeasonsUseCase) private var getSeriesSeasonsUseCase
@@ -48,6 +56,8 @@ struct WatchSheetView: View {
 
     @State private var showRating: Bool = false
 
+    @FocusState private var focusedField: FocusTarget?
+
     init(id: String, playerData: Binding<PlayerData?>) {
         self.id = id
         _playerData = playerData
@@ -68,8 +78,7 @@ struct WatchSheetView: View {
                             selectedEpisode: $selectedEpisode,
                             showRating: $showRating,
                             isUserPremium: isUserPremium != nil,
-                            isLoggedIn: isLoggedIn,
-                            selectPositions: selectPositions,
+                            focusedField: $focusedField,
                             appState: appState,
                             dismiss: dismiss,
                         )
@@ -78,7 +87,7 @@ struct WatchSheetView: View {
                         WatchSheetQualityPicker(
                             movie: movie,
                             selectedQuality: $selectedQuality,
-                            selectedActing: selectedActing,
+                            focusedField: $focusedField,
                             isLoggedIn: isLoggedIn,
                             isLoginPresented: $isLoginPresented,
                         )
@@ -97,6 +106,7 @@ struct WatchSheetView: View {
                 selectedEpisode: selectedEpisode,
                 movie: movie,
                 playerData: $playerData,
+                focusedField: $focusedField,
                 dismiss: dismiss,
             )
         }
@@ -133,12 +143,17 @@ struct WatchSheetView: View {
         .padding(.top, 35)
         .padding(.bottom, 25)
         .fixedSize(horizontal: false, vertical: true)
-        .frame(width: 520)
+        .frame(width: 760)
         .onAppear { subscribeOnAppear() }
         .onChange(of: details) { handleDetailsChange() }
         .onChange(of: selectedActing) { handleActingChange() }
         .onChange(of: selectedSeason) { handleSeasonChange() }
         .onChange(of: selectedEpisode) { handleEpisodeChange() }
+        .onChange(of: selectedQuality) { _, selectedQuality in
+            if let selectedQuality {
+                focusedField = .quality(selectedQuality)
+            }
+        }
         .analyticsScreen(name: "watch_sheet", class: "WatchSheetView")
     }
 
@@ -161,6 +176,10 @@ struct WatchSheetView: View {
         guard let details, let acting = details.voiceActing else { return }
         withAnimation(.easeInOut) {
             selectedActing = pickActing(details: details, acting: acting)
+        }
+
+        if let selectedActing {
+            focusedField = .acting(selectedActing.id)
         }
     }
 
@@ -205,6 +224,10 @@ struct WatchSheetView: View {
                             self.seasons = seasons
                             selectedSeason = pickSeason(details: details, selectedActing: selectedActing, seasons: seasons)
                         }
+
+                        if let selectedSeason {
+                            focusedField = .season(selectedSeason.id)
+                        }
                     }
                     .store(in: &subscriptions)
             } else {
@@ -225,6 +248,10 @@ struct WatchSheetView: View {
                         withAnimation(.easeInOut) {
                             self.movie = movie
                             selectedQuality = pickQuality(movie: movie)
+                        }
+
+                        if let selectedQuality {
+                            focusedField = .quality(selectedQuality)
                         }
                     }
                 }
@@ -254,6 +281,10 @@ struct WatchSheetView: View {
             selectedQuality = nil
             movie = nil
             selectedEpisode = pickEpisode()
+        }
+
+        if let selectedEpisode {
+            focusedField = .episode(selectedEpisode.id)
         }
     }
 
@@ -294,6 +325,10 @@ struct WatchSheetView: View {
                     withAnimation(.easeInOut) {
                         self.movie = movie
                         selectedQuality = pickQuality(movie: movie)
+                    }
+
+                    if let selectedQuality {
+                        focusedField = .quality(selectedQuality)
                     }
                 }
             }
@@ -342,52 +377,283 @@ struct WatchSheetView: View {
         @Binding var selectedSeason: MovieSeason?
         @Binding var selectedEpisode: MovieEpisode?
         @Binding var showRating: Bool
-        let isUserPremium: Bool?
-        let isLoggedIn: Bool
-        let selectPositions: [SelectPosition]
+        let isUserPremium: Bool
+        @FocusState.Binding var focusedField: FocusTarget?
         let appState: AppState
         let dismiss: DismissAction
 
         var body: some View {
-            VStack(spacing: 2.5) {
-                if let acting = details.voiceActing, !acting.filter({ !$0.name.isEmpty }).isEmpty {
-                    HStack {
-                        Text("key.acting")
-                        // ... (повторить логику из главного файла для кнопки рейтинга и меню выбора)
-                        Spacer()
-                        // ... (menu как в основном файле)
+            let actingOptions = details.voiceActing?.filter { !$0.name.isEmpty } ?? []
+
+            VStack(alignment: .leading, spacing: 16) {
+                if !actingOptions.isEmpty {
+                    WatchSheetSectionHeader(
+                        title: String(localized: "key.acting"),
+                        value: selectedActingTitle,
+                    ) {
+                        if let rating = details.voiceActingRating?.sorted(by: { $0.percent > $1.percent }), !rating.isEmpty {
+                            Button {
+                                withAnimation(.easeInOut) {
+                                    showRating.toggle()
+                                }
+                            } label: {
+                                Label(showRating ? String(localized: "key.hide") : String(localized: "key.info.rating"), systemImage: showRating ? "chevron.up" : "chart.bar.fill")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .padding(.vertical, 10)
-                    .overlay { if acting.isEmpty != false { ProgressView().scaleEffect(0.6) } }
+
+                    WatchSheetOptionsRow(actingOptions) { acting in
+                        Button {
+                            if acting.isPremium, !isUserPremium {
+                                dismiss()
+                                appState.isPremiumPresented = true
+                            } else {
+                                withAnimation(.easeInOut) {
+                                    selectedActing = acting
+                                }
+                            }
+                        } label: {
+                            WatchSheetOptionChip(
+                                title: actingTitle(acting),
+                                subtitle: actingSubtitle(acting),
+                                isSelected: selectedActing == acting,
+                                isDisabled: acting.isPremium && !isUserPremium,
+                                systemImage: acting.isPremium ? "star.fill" : nil,
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .focused($focusedField, equals: .acting(acting.id))
+                    }
+                    .viewModifier { view in
+                        view.focusSection()
+                    }
+
+                    if showRating,
+                       let rating = details.voiceActingRating?.sorted(by: { $0.percent > $1.percent }),
+                       !rating.isEmpty
+                    {
+                        VStack(alignment: .leading, spacing: 10) {
+                            ForEach(rating) { rate in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack(alignment: .center) {
+                                        Text(rate.name)
+                                            .font(.subheadline.weight(.medium))
+
+                                        Spacer()
+
+                                        Text(verbatim: "\(Int(rate.percent))%")
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+
+                                    ProgressView(value: Double(rate.percent), total: 100)
+                                        .tint(.accentColor)
+                                }
+                            }
+                        }
+                        .padding(14)
+                        .background(.background.opacity(0.6), in: .rect(cornerRadius: 8))
+                    }
                 }
-                // ... аналогично для выбора сезона и эпизода, либо вынести в отдельные View
+
+                if details.series != nil, selectedActing != nil {
+                    WatchSheetSelectionBlock(
+                        title: String(localized: "key.season"),
+                        value: selectedSeasonTitle,
+                        isLoading: seasons?.isEmpty != false,
+                    ) {
+                        WatchSheetOptionsRow(seasons ?? []) { season in
+                            Button {
+                                withAnimation(.easeInOut) {
+                                    selectedSeason = season
+                                }
+                            } label: {
+                                WatchSheetOptionChip(
+                                    title: seasonTitle(season),
+                                    isSelected: selectedSeason == season,
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .focused($focusedField, equals: .season(season.id))
+                        }
+                    }
+
+                    WatchSheetSelectionBlock(
+                        title: String(localized: "key.episode"),
+                        value: selectedEpisodeTitle,
+                        isLoading: selectedSeason?.episodes.isEmpty != false,
+                    ) {
+                        WatchSheetOptionsRow(selectedSeason?.episodes ?? []) { episode in
+                            Button {
+                                withAnimation(.easeInOut) {
+                                    selectedEpisode = episode
+                                }
+                            } label: {
+                                WatchSheetOptionChip(
+                                    title: episodeTitle(episode),
+                                    isSelected: selectedEpisode == episode,
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .focused($focusedField, equals: .episode(episode.id))
+                        }
+                    }
+                }
             }
             .padding(.horizontal, 15)
-            .padding(.vertical, 5)
+            .padding(.vertical, 15)
             .background(.quinary, in: .rect(cornerRadius: 6))
             .overlay(.tertiary, in: .rect(cornerRadius: 6).stroke(lineWidth: 1))
+        }
+
+        private var selectedActingTitle: String {
+            if let selectedActing {
+                actingTitle(selectedActing)
+            } else {
+                String(localized: "key.acting.select")
+            }
+        }
+
+        private var selectedSeasonTitle: String {
+            if let selectedSeason {
+                seasonTitle(selectedSeason)
+            } else {
+                String(localized: "key.season.select")
+            }
+        }
+
+        private var selectedEpisodeTitle: String {
+            if let selectedEpisode {
+                episodeTitle(selectedEpisode)
+            } else {
+                String(localized: "key.episode.select")
+            }
+        }
+
+        private func actingTitle(_ acting: MovieVoiceActing) -> String {
+            acting.name.isEmpty ? String(localized: "key.default") : acting.name
+        }
+
+        private func actingSubtitle(_ acting: MovieVoiceActing) -> String? {
+            var badges: [String] = []
+
+            if acting.isPremium {
+                badges.append(String(localized: "key.premium"))
+            }
+
+            if acting.isDirector == "1" {
+                badges.append("Director")
+            }
+
+            if acting.isAds == "1" {
+                badges.append("Ads")
+            }
+
+            if acting.isCamrip == "1" {
+                badges.append("CamRip")
+            }
+
+            return badges.isEmpty ? nil : badges.joined(separator: " • ")
+        }
+
+        private func seasonTitle(_ season: MovieSeason) -> String {
+            localizedOrdinalName(season.name, key: "key.season")
+        }
+
+        private func episodeTitle(_ episode: MovieEpisode) -> String {
+            localizedOrdinalName(episode.name, key: "key.episode")
+        }
+
+        private func localizedOrdinalName(_ name: String, key: String) -> String {
+            if name.isEmpty {
+                String(localized: "\(key)-\(1)")
+            } else if name.first?.isNumber == true {
+                String(localized: "\(key)-\(name)")
+            } else {
+                name
+            }
         }
     }
 
     private struct WatchSheetQualityPicker: View {
         let movie: MovieVideo?
         @Binding var selectedQuality: String?
-        let selectedActing: MovieVoiceActing?
+        @FocusState.Binding var focusedField: FocusTarget?
         let isLoggedIn: Bool
         @Binding var isLoginPresented: Bool
 
         var body: some View {
-            HStack {
-                Text("key.quality")
-                // ... Логика для ShareLink и Menu с качествами
-                Spacer()
-                // ... Menu для выбора качества как в основном файле
+            let availableQualities = movie?.getAvailableQualities() ?? []
+            let lockedQualities = movie?.getLockedQualities() ?? []
+
+            VStack(alignment: .leading, spacing: 14) {
+                WatchSheetSectionHeader(
+                    title: String(localized: "key.quality"),
+                    value: selectedQuality ?? String(localized: "key.quality.select"),
+                )
+
+                if !availableQualities.isEmpty {
+                    WatchSheetOptionsRow(availableQualities, id: \.self) { quality in
+                        Button {
+                            withAnimation(.easeInOut) {
+                                selectedQuality = quality
+                            }
+                        } label: {
+                            WatchSheetOptionChip(
+                                title: quality,
+                                isSelected: selectedQuality == quality,
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .focused($focusedField, equals: .quality(quality))
+                    }
+                    .viewModifier { view in
+                        view.focusSection()
+                    }
+                }
+
+                if !lockedQualities.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("key.sign_in.access")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        WatchSheetOptionsRow(lockedQualities, id: \.self) { quality in
+                            Button {
+                                if isLoggedIn {
+                                    withAnimation(.easeInOut) {
+                                        selectedQuality = quality
+                                    }
+                                } else {
+                                    isLoginPresented = true
+                                }
+                            } label: {
+                                WatchSheetOptionChip(
+                                    title: quality,
+                                    subtitle: isLoggedIn ? nil : String(localized: "key.sign_in"),
+                                    isSelected: selectedQuality == quality,
+                                    isDisabled: !isLoggedIn,
+                                    systemImage: isLoggedIn ? nil : "lock.fill",
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .focused($focusedField, equals: .quality(quality))
+                        }
+                    }
+                }
             }
             .padding(.horizontal, 15)
             .padding(.vertical, 15)
             .background(.quinary, in: .rect(cornerRadius: 6))
             .overlay(.tertiary, in: .rect(cornerRadius: 6).stroke(lineWidth: 1))
-            .overlay { if movie?.getAvailableQualities().isEmpty != false { ProgressView().scaleEffect(0.6) } }
+            .overlay {
+                if movie?.getAvailableQualities().isEmpty != false {
+                    ProgressView().scaleEffect(0.6)
+                }
+            }
         }
     }
 
@@ -400,6 +666,7 @@ struct WatchSheetView: View {
         let selectedEpisode: MovieEpisode?
         let movie: MovieVideo?
         @Binding var playerData: PlayerData?
+        @FocusState.Binding var focusedField: FocusTarget?
         let dismiss: DismissAction
 
         var body: some View {
@@ -419,30 +686,157 @@ struct WatchSheetView: View {
                     }
                 } label: {
                     Text("key.watch")
-                        .frame(width: 250, height: 30)
+                        .font(.headline.weight(.semibold))
+                        .frame(width: 280, height: 56)
                         .foregroundStyle(.white)
                         .contentShape(.rect(cornerRadius: 6))
                         .background(selectedQuality != nil ? Color.accentColor : Color.secondary, in: .rect(cornerRadius: 6))
                 }
                 .buttonStyle(.plain)
                 .disabled(selectedQuality == nil)
+                .focused($focusedField, equals: .play)
             }
         }
     }
 
-    private struct CustomLabelStyle: LabelStyle {
-        private let iconVisible: Bool
+    private struct WatchSheetSelectionBlock<Content: View>: View {
+        let title: String
+        let value: String
+        let isLoading: Bool
+        @ViewBuilder let content: Content
 
-        init(iconVisible: Bool = true) {
-            self.iconVisible = iconVisible
+        var body: some View {
+            VStack(alignment: .leading, spacing: 12) {
+                WatchSheetSectionHeader(title: title, value: value)
+
+                ZStack {
+                    content
+                        .opacity(isLoading ? 0 : 1)
+
+                    if isLoading {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, minHeight: 84)
+                    }
+                }
+            }
+        }
+    }
+
+    private struct WatchSheetSectionHeader<TrailingContent: View>: View {
+        let title: String
+        let value: String
+        @ViewBuilder let trailingContent: TrailingContent
+
+        init(title: String, value: String, @ViewBuilder trailingContent: () -> TrailingContent = { EmptyView() }) {
+            self.title = title
+            self.value = value
+            self.trailingContent = trailingContent()
         }
 
-        func makeBody(configuration: Configuration) -> some View {
-            HStack(alignment: .center, spacing: 8) {
-                configuration.title
-                if iconVisible {
-                    configuration.icon
+        var body: some View {
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text(title)
+                    .font(.headline)
+
+                Text(value)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                Spacer(minLength: 10)
+
+                trailingContent
+            }
+        }
+    }
+
+    private struct WatchSheetOptionsRow<Data: RandomAccessCollection, ID: Hashable, Content: View>: View {
+        private let data: Data
+        private let id: KeyPath<Data.Element, ID>
+        private let content: (Data.Element) -> Content
+
+        init(_ data: Data, id: KeyPath<Data.Element, ID>, @ViewBuilder content: @escaping (Data.Element) -> Content) {
+            self.data = data
+            self.id = id
+            self.content = content
+        }
+
+        init(_ data: Data, @ViewBuilder content: @escaping (Data.Element) -> Content) where Data.Element: Identifiable, ID == Data.Element.ID {
+            self.init(data, id: \.id, content: content)
+        }
+
+        var body: some View {
+            ScrollView(.horizontal) {
+                LazyHStack(alignment: .top, spacing: 12) {
+                    ForEach(data, id: id) { element in
+                        content(element)
+                    }
                 }
+                .padding(.vertical, 2)
+            }
+            .scrollIndicators(.never)
+        }
+    }
+
+    private struct WatchSheetOptionChip: View {
+        let title: String
+        var subtitle: String?
+        var isSelected: Bool = false
+        var isDisabled: Bool = false
+        var systemImage: String?
+
+        var body: some View {
+            HStack(alignment: .center, spacing: 10) {
+                if let systemImage {
+                    Image(systemName: systemImage)
+                        .font(.caption.weight(.bold))
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.body.weight(.medium))
+                        .lineLimit(1)
+
+                    if let subtitle {
+                        Text(subtitle)
+                            .font(.caption)
+                            .lineLimit(1)
+                    }
+                }
+            }
+            .foregroundStyle(foregroundStyle)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(backgroundStyle, in: .rect(cornerRadius: 10))
+            .overlay(borderStyle, in: .rect(cornerRadius: 10).stroke(lineWidth: 1))
+            .opacity(isDisabled ? 0.7 : 1)
+        }
+
+        private var foregroundStyle: AnyShapeStyle {
+            if isSelected {
+                AnyShapeStyle(.white)
+            } else if isDisabled {
+                AnyShapeStyle(.tertiary)
+            } else {
+                AnyShapeStyle(.primary)
+            }
+        }
+
+        private var backgroundStyle: AnyShapeStyle {
+            if isSelected {
+                AnyShapeStyle(Color.accentColor)
+            } else if isDisabled {
+                AnyShapeStyle(Color.secondary.opacity(0.18))
+            } else {
+                AnyShapeStyle(.background.opacity(0.85))
+            }
+        }
+
+        private var borderStyle: AnyShapeStyle {
+            if isSelected {
+                AnyShapeStyle(Color.accentColor)
+            } else {
+                AnyShapeStyle(.tertiary)
             }
         }
     }
