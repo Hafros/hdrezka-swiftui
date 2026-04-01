@@ -14,6 +14,7 @@ enum Tabs: Hashable, Identifiable, CaseIterable, View {
     case search
     case watchingLater
     case bookmarks
+    case profile
 
     var label: LocalizedStringKey {
         switch self {
@@ -29,6 +30,8 @@ enum Tabs: Hashable, Identifiable, CaseIterable, View {
             "key.watching_later"
         case .bookmarks:
             "key.bookmarks"
+        case .profile:
+            "key.profile"
         }
     }
 
@@ -46,6 +49,8 @@ enum Tabs: Hashable, Identifiable, CaseIterable, View {
             "clock.arrow.circlepath"
         case .bookmarks:
             "bookmark"
+        case .profile:
+            "person.crop.circle"
         }
     }
 
@@ -72,6 +77,8 @@ enum Tabs: Hashable, Identifiable, CaseIterable, View {
             "watching_later"
         case .bookmarks:
             "bookmarks"
+        case .profile:
+            "profile"
         }
     }
 
@@ -89,6 +96,8 @@ enum Tabs: Hashable, Identifiable, CaseIterable, View {
             "WatchingLaterView"
         case .bookmarks:
             "BookmarksView"
+        case .profile:
+            "ProfileView"
         }
     }
 
@@ -98,7 +107,7 @@ enum Tabs: Hashable, Identifiable, CaseIterable, View {
             case .home:
                 HomeView()
                     .id("home")
-//                    .destinations()
+                    .destinations()
                     .analyticsScreen(name: name, class: className)
             case .search:
                 SearchView()
@@ -125,6 +134,10 @@ enum Tabs: Hashable, Identifiable, CaseIterable, View {
                     .id("bookmarks")
 //                    .destinations()
                     .analyticsScreen(name: name, class: className)
+            case .profile:
+                ProfileView()
+                    .id("profile")
+                    .destinations()
             }
         }
     }

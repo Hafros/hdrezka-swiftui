@@ -169,6 +169,7 @@
 				macOS/Utils/RemoveBackgroundImageProcessor.swift = (macos, );
 				macOS/Utils/WindowAccessor.swift = (macos, );
 				tvOS/ContentView.swift = (tvos, );
+				"tvOS/Core/Destinations+View.swift" = (tvos, );
 				tvOS/Core/Downloader.swift = (tvos, );
 				tvOS/Core/Tabs.swift = (tvos, );
 				tvOS/HDrezkaApp.swift = (tvos, );
@@ -187,6 +188,7 @@
 				tvOS/Presentations/DetailsView/StarsView.swift = (tvos, );
 				tvOS/Presentations/HomeView.swift = (tvos, );
 				tvOS/Presentations/SearchView.swift = (tvos, );
+				tvOS/Presentations/SignInView.swift = (tvos, );
 				tvOS/Presentations/WatchingLaterView.swift = (tvos, );
 			};
 			target = 04B3CA732BA06C9C0039F76E /* HDrezka */;

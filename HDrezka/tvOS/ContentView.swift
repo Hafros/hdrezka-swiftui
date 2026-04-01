@@ -75,6 +75,12 @@ struct ContentView: View {
                 }
                 .store(in: &subscriptions)
         }
+        .sheet(isPresented: $appState.isSignInPresented) {
+            SignInSheetView()
+                .presentationSizing(.fitted)
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+        }
         .onChange(of: isLoggedIn) {
             if !isLoggedIn, appState.selectedTab.needAccount {
                 appState.selectedTab = .home

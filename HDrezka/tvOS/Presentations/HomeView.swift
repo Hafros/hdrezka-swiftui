@@ -30,8 +30,11 @@ struct HomeView: View {
                             ScrollView(.horizontal) {
                                 LazyHStack(alignment: .top, spacing: 18) {
                                     ForEach(category.movies) { movie in
-                                        CardView(movie: movie)
-                                            .frame(width: 300)
+                                        NavigationLink(value: Destinations.details(movie)) {
+                                            TVPosterViewRepresentable(movie: movie)
+                                        }
+//                                        CardView(movie: movie)
+//                                            .frame(width: 300)
                                     }
                                 }
                                 .padding(.horizontal, 36)
@@ -119,8 +122,8 @@ struct HomeView: View {
                 viewModel.load()
             }
         }
-//        .navigationDestination(item: $movieDestination) {
-//            DetailsView(movie: $0)
-//        }
+        .navigationDestination(item: $movieDestination) {
+            DetailsView(movie: $0)
+        }
     }
 }
