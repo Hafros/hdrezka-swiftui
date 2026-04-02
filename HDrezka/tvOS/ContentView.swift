@@ -41,7 +41,7 @@ struct ContentView: View {
             get: { appState.selectedTab },
             set: { newValue in appState.selectedTab = newValue },
         )) {
-            ForEach(Tabs.allCases.filter { !$0.needAccount }) { tab in
+            ForEach(Tabs.allCases.filter { !$0.needAccount && $0.showsInTabBar }) { tab in
                 tab
                     .tabItem {
                         Label {
@@ -54,7 +54,7 @@ struct ContentView: View {
             }
 
             if isLoggedIn {
-                ForEach(Tabs.allCases.filter(\.needAccount)) { tab in
+                ForEach(Tabs.allCases.filter { $0.needAccount && $0.showsInTabBar }) { tab in
                     tab
                         .tabItem {
                             Label {
@@ -68,6 +68,10 @@ struct ContentView: View {
             }
         }
         .onAppear {
+            if !appState.selectedTab.showsInTabBar {
+                appState.selectedTab = .home
+            }
+
             getVersionUseCase()
                 .receive(on: DispatchQueue.main)
                 .sink { _ in } receiveValue: { version in
@@ -80,6 +84,9 @@ struct ContentView: View {
                 .presentationSizing(.fitted)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
+        }
+        .fullScreenCover(item: $appState.presentedDetailsMovie) { movie in
+            DetailsView(movie: movie)
         }
         .onChange(of: isLoggedIn) {
             if !isLoggedIn, appState.selectedTab.needAccount {

@@ -19,37 +19,6 @@ class HomeViewModel {
 
     var isSeriesUpdatesPresented: Bool = false
 
-    @ObservationIgnored private var page: Categories?
-
-    private func getData(category: Categories, isInitial: Bool = true) {
-        getPublisher(category: category)
-            .receive(on: DispatchQueue.main)
-            .sink { completion in
-                if case let .failure(error) = completion {
-                    withAnimation(.easeInOut) {
-                        if isInitial {
-                            self.state = .error(error)
-                        } else {
-                            self.paginationState = .error(error)
-                        }
-                    }
-                }
-            } receiveValue: { movies in
-                self.page = Categories.allCases.element(after: category)
-                let newCategory = Category(category: category, title: category.localized, movies: movies)
-
-                withAnimation(.easeInOut) {
-                    if isInitial {
-                        self.state = .data([newCategory])
-                    } else {
-                        self.state.append([newCategory])
-                        self.paginationState = .idle
-                    }
-                }
-            }
-            .store(in: &subscriptions)
-    }
-
     private func getPublisher(category: Categories) -> AnyPublisher<[MovieSimple], Error> {
         switch category {
         case .hot: getHotMoviesUseCase(genre: 0)
@@ -62,24 +31,52 @@ class HomeViewModel {
         }
     }
 
+    private func loadAllCategories() {
+        let publishers = Categories.allCases.enumerated().map { index, category in
+            getPublisher(category: category)
+                .map { movies in
+                    (index, Category(category: category, title: category.localized, movies: movies))
+                }
+                .eraseToAnyPublisher()
+        }
+
+        Publishers.MergeMany(publishers)
+            .collect()
+            .map { categories in
+                categories
+                    .sorted { $0.0 < $1.0 }
+                    .map(\.1)
+            }
+            .receive(on: DispatchQueue.main)
+            .sink { completion in
+                if case let .failure(error) = completion {
+                    withAnimation(.easeInOut) {
+                        self.state = .error(error)
+                        self.paginationState = .error(error)
+                    }
+                }
+            } receiveValue: { categories in
+                withAnimation(.easeInOut) {
+                    self.state = .data(categories)
+                    self.paginationState = .idle
+                }
+            }
+            .store(in: &subscriptions)
+    }
+
     func load() {
+        subscriptions.removeAll()
         state = .loading
         paginationState = .idle
 
-        page = Categories.allCases.first
-
-        if let page {
-            getData(category: page)
-        }
+        loadAllCategories()
     }
 
     func loadMore(reset: Bool = false) {
-        guard let page, paginationState == .idle || reset else { return }
+        guard reset else { return }
 
-        withAnimation(.easeInOut) {
-            paginationState = .loading
+        if state.data == nil {
+            load()
         }
-
-        getData(category: page, isInitial: false)
     }
 }

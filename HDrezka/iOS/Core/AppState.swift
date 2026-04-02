@@ -13,6 +13,7 @@ class AppState {
     var commentsRulesPresented = false
 
     var isPremiumPresented = false
+    var presentedDetailsMovie: MovieSimple?
 
     var selectedTab: Tabs = .home
 }

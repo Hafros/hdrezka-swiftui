@@ -5,7 +5,7 @@
 //  Created by Alex Hafros on 19.01.2026.
 //
 
-import Defaults
+import Kingfisher
 import SwiftUI
 
 struct CollectionsView: View {
@@ -14,20 +14,20 @@ struct CollectionsView: View {
     @State private var viewModel = CollectionsViewModel()
 
     private let columns = [
-        GridItem(.adaptive(minimum: 250, maximum: .infinity), spacing: 18, alignment: .topLeading),
+        GridItem(.adaptive(minimum: 320, maximum: 460), spacing: 24, alignment: .topLeading),
     ]
 
     var body: some View {
         ScrollView(.vertical) {
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 18) {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 24) {
                 if let collections = viewModel.state.data, !collections.isEmpty {
                     ForEach(collections) { collection in
-                        CollectionCardView(collection: collection)
+                        TVCollectionCardView(collection: collection)
                     }
                 }
             }
             .scrollTargetLayout()
-            .padding(.vertical, 18)
+            .padding(.vertical, 24)
             .padding(.horizontal, 36)
 
             if viewModel.paginationState == .loading {
@@ -46,7 +46,7 @@ struct CollectionsView: View {
             }
         }
         .viewModifier { view in
-            if #available(macOS 26, *) {
+            if #available(tvOS 26, *) {
                 view.scrollEdgeEffectStyle(.soft, for: .all)
             } else {
                 view
@@ -91,5 +91,67 @@ struct CollectionsView: View {
                 viewModel.load()
             }
         }
+    }
+}
+
+private struct TVCollectionCardView: View {
+    let collection: MoviesCollection
+
+    @Environment(\.isFocused) private var isFocused
+
+    var body: some View {
+        NavigationLink(value: Destinations.collection(collection)) {
+            GeometryReader { geometry in
+                ZStack(alignment: .bottomLeading) {
+                    if let poster = collection.poster,
+                       let url = URL(string: poster)
+                    {
+                        KFImage
+                            .url(url)
+                            .setProcessor(DownsamplingImageProcessor(size: geometry.size))
+                            .placeholder {
+                                Color.gray.shimmering()
+                            }
+                            .resizable()
+                            .cancelOnDisappear(true)
+                            .fade(duration: 0.2)
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: geometry.size.width, height: geometry.size.height)
+                            .clipShape(.rect(cornerRadius: 28))
+                    }
+
+                    LinearGradient(
+                        colors: [.clear, Color.black.opacity(0.14), Color.black.opacity(0.88)],
+                        startPoint: .top,
+                        endPoint: .bottom,
+                    )
+                    .clipShape(.rect(cornerRadius: 28))
+
+                    Text(collection.name)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .padding(18)
+                }
+                .overlay(alignment: .topTrailing) {
+                    if let count = collection.count {
+                        TVDarkBadge(text: "\(count)")
+                            .padding(14)
+                    }
+                }
+                .background(Color.black.opacity(0.22), in: .rect(cornerRadius: 28))
+                .overlay {
+                    RoundedRectangle(cornerRadius: 28, style: .continuous)
+                        .strokeBorder(isFocused ? Color.accentColor.opacity(0.95) : Color.white.opacity(0.08), lineWidth: isFocused ? 2.5 : 1)
+                }
+            }
+            .aspectRatio(1.72, contentMode: .fit)
+            .contentShape(.rect(cornerRadius: 28))
+        }
+        .buttonStyle(OnPressButtonStyle { _ in })
+        .focusEffectDisabled()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(Text(collection.name))
+        .accessibilityHint(Text("key.open"))
     }
 }

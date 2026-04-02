@@ -5,9 +5,10 @@ struct WatchingLaterView: View {
     private let title = String(localized: "key.watching_later")
 
     @State private var viewModel = WatchingLaterViewModel()
+    @FocusState private var focusedMovieID: MovieWatchLater.ID?
 
     private let columns = [
-        GridItem(.adaptive(minimum: 260, maximum: .infinity), spacing: 24, alignment: .topLeading),
+        GridItem(.adaptive(minimum: 320, maximum: 460), spacing: 26, alignment: .topLeading),
     ]
 
     @Environment(\.modelContext) private var modelContext
@@ -16,10 +17,11 @@ struct WatchingLaterView: View {
 
     var body: some View {
         ScrollView(.vertical) {
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 24) {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 26) {
                 if let movies = viewModel.state.data, !movies.isEmpty {
                     ForEach(movies) { movie in
-                        WatchingLaterCardView(movie: movie)
+                        WatchingLaterCardView(movie: movie, isFocused: focusedMovieID == movie.id)
+                            .focused($focusedMovieID, equals: movie.id)
                             .contextMenu {
                                 Button {
                                     viewModel.switchWatchedItem(movie: movie)
@@ -41,7 +43,7 @@ struct WatchingLaterView: View {
                 }
             }
             .scrollTargetLayout()
-            .padding(.vertical, 18)
+            .padding(.vertical, 24)
             .padding(.horizontal, 36)
         }
         .scrollIndicators(.visible, axes: .vertical)
@@ -69,10 +71,17 @@ struct WatchingLaterView: View {
         .onAppear {
             switch viewModel.state {
             case .data:
-                break
+                if focusedMovieID == nil {
+                    focusedMovieID = viewModel.state.data?.first?.id
+                }
             default:
                 viewModel.load()
             }
+        }
+        .onChange(of: viewModel.state.data?.map(\.id)) {
+            guard focusedMovieID == nil else { return }
+
+            focusedMovieID = viewModel.state.data?.first?.id
         }
         .alert("key.ops", isPresented: $viewModel.isErrorPresented) {
             Button(role: .cancel) {} label: {

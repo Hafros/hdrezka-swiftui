@@ -17,6 +17,7 @@ struct DetailsViewComponent: View {
     @Binding private var isSchedulePresented: Bool
 
     @Environment(Downloader.self) private var downloader
+    @Environment(AppState.self) private var appState
 
     @Binding private var countryDestination: MovieCountry?
     @Binding private var genreDestination: MovieGenre?
@@ -482,7 +483,9 @@ struct DetailsViewComponent: View {
                         LazyVStack(alignment: .leading, spacing: 0) {
                             ForEach(franchise.prefix(franchiseExpanded ? franchise.count : 5)) { fr in
                                 if !fr.current, let movieId = fr.franchiseId {
-                                    NavigationLink(value: Destinations.details(MovieSimple(movieId: movieId, name: fr.name))) {
+                                    Button {
+                                        appState.presentedDetailsMovie = MovieSimple(movieId: movieId, name: fr.name)
+                                    } label: {
                                         HStack(alignment: .center, spacing: 4) {
                                             ZStack(alignment: .center) {
                                                 ZStack(alignment: .center) {
@@ -667,7 +670,7 @@ struct DetailsViewComponent: View {
                 LazyHStack(alignment: .top, spacing: 18) {
                     ForEach(details.watchAlsoMovies) { movie in
                         CardView(movie: movie)
-                            .frame(width: 150)
+                            .frame(width: 320)
                     }
                 }
                 .padding(.horizontal, 36)

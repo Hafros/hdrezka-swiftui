@@ -63,6 +63,15 @@ enum Tabs: Hashable, Identifiable, CaseIterable, View {
         }
     }
 
+    var showsInTabBar: Bool {
+        switch self {
+        case .categories, .collections:
+            false
+        default:
+            true
+        }
+    }
+
     var name: String {
         switch self {
         case .home:

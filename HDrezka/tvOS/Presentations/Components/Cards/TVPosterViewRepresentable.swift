@@ -7,47 +7,100 @@
 
 import Kingfisher
 import SwiftUI
-import TVUIKit
 
-struct TVPosterViewRepresentable: UIViewRepresentable {
+struct TVPosterViewRepresentable: View {
     let movie: MovieSimple
-    let posterWidth = CGFloat(UIScreen.main.bounds.width / 4) - 20
-    let posterHeight = CGFloat(((UIScreen.main.bounds.width / 4) - 20) * 281 / 500)
-//    let onSelect: () -> Void
+    let size: CGSize
 
-    func makeUIView(context _: Context) -> TVPosterView {
-        let poster = TVPosterView()
-//        poster.addGestureRecognizer(UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.didSelect)))
-        poster.isUserInteractionEnabled = true
-        return poster
+    @Environment(\.isFocused) private var isFocused
+
+    private var title: String {
+        movie.name ?? ""
     }
 
-    func updateUIView(_ uiView: TVPosterView, context _: Context) {
-        uiView.contentSize = CGSize(width: posterHeight, height: posterWidth)
-        if let name = movie.name, let details = movie.details {
-            uiView.title = name
-            uiView.subtitle = details
+    private var subtitle: String {
+        if let details = movie.details, !details.isEmpty {
+            return details
         }
+
+        return movie.info?.title ?? ""
+    }
+
+    var body: some View {
+        ZStack(alignment: .bottomLeading) {
+            posterArtwork
+
+            LinearGradient(
+                colors: [.clear, Color.black.opacity(0.08), Color.black.opacity(0.86)],
+                startPoint: .top,
+                endPoint: .bottom,
+            )
+            .clipShape(.rect(cornerRadius: 28))
+
+            VStack(alignment: .leading, spacing: 6) {
+                if !title.isEmpty {
+                    Text(title)
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                }
+
+                if !subtitle.isEmpty {
+                    Text(subtitle)
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.82))
+                        .lineLimit(2)
+                }
+            }
+            .padding(18)
+        }
+        .frame(width: size.width, height: size.height)
+        .background(Color.black.opacity(0.22), in: .rect(cornerRadius: 28))
+        .overlay {
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .strokeBorder(isFocused ? Color.accentColor.opacity(0.95) : Color.white.opacity(0.08), lineWidth: isFocused ? 2.5 : 1)
+        }
+        .shadow(color: .black.opacity(isFocused ? 0.42 : 0.18), radius: isFocused ? 28 : 16, y: isFocused ? 20 : 10)
+        .scaleEffect(isFocused ? 1.035 : 1)
+        .animation(.easeOut(duration: 0.18), value: isFocused)
+        .focusEffectDisabled()
+    }
+
+    @ViewBuilder
+    private var posterArtwork: some View {
         if let poster = movie.poster,
            let url = URL(string: poster)
         {
-            KF.url(url)
-                .loadDiskFileSynchronously()
-                .cacheMemoryOnly(false)
-                .fade(duration: 0.25)
-                .set(to: uiView.imageView)
+            KFImage
+                .url(url)
+                .setProcessor(DownsamplingImageProcessor(size: size))
+                .placeholder {
+                    placeholder
+                }
+                .resizable()
+                .cancelOnDisappear(true)
+                .fade(duration: 0.2)
+                .aspectRatio(contentMode: .fill)
+                .frame(width: size.width, height: size.height)
+                .clipShape(.rect(cornerRadius: 28))
         } else {
-            uiView.image = nil
+            placeholder
         }
     }
 
-//    func makeCoordinator() -> Coordinator {
-//        Coordinator(onSelect: onSelect)
-//    }
+    private var placeholder: some View {
+        ZStack {
+            LinearGradient(
+                colors: [Color.white.opacity(0.06), Color.white.opacity(0.02)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing,
+            )
 
-//    class Coordinator: NSObject {
-//        let onSelect: () -> Void
-//        init(onSelect: @escaping () -> Void) { self.onSelect = onSelect }
-//        @objc func didSelect() { onSelect() }
-//    }
+            Image(systemName: "play.rectangle.fill")
+                .font(.system(size: 42))
+                .foregroundStyle(.white.opacity(0.35))
+        }
+        .frame(width: size.width, height: size.height)
+        .clipShape(.rect(cornerRadius: 28))
+    }
 }

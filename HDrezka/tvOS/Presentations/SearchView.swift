@@ -12,12 +12,12 @@ struct SearchView: View {
     @State private var viewModel = SearchViewModel()
 
     private let columns = [
-        GridItem(.adaptive(minimum: 150, maximum: .infinity), spacing: 18, alignment: .topLeading),
+        GridItem(.adaptive(minimum: 300, maximum: 420), spacing: 24, alignment: .topLeading),
     ]
 
     var body: some View {
         ScrollView(.vertical) {
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 18) {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 24) {
                 if let movies = viewModel.state.data, !movies.isEmpty {
                     ForEach(movies) { movie in
                         CardView(movie: movie)
@@ -25,7 +25,7 @@ struct SearchView: View {
                 }
             }
             .scrollTargetLayout()
-            .padding(.vertical, 18)
+            .padding(.vertical, 24)
             .padding(.horizontal, 36)
 
             if viewModel.paginationState == .loading {
@@ -44,7 +44,7 @@ struct SearchView: View {
             }
         }
         .viewModifier { view in
-            if #available(macOS 26, *) {
+            if #available(tvOS 26, *) {
                 view.scrollEdgeEffectStyle(.soft, for: .all)
             } else {
                 view
