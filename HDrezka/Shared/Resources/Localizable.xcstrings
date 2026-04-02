@@ -21,6 +21,9 @@
         }
       }
     },
+    "%gx" : {
+
+    },
     "key.2k" : {
       "localizations" : {
         "en" : {
@@ -7964,6 +7967,24 @@
           }
         }
       }
+    },
+    "Next Episode" : {
+
+    },
+    "Now Playing" : {
+
+    },
+    "Playback Speed" : {
+
+    },
+    "Previous Episode" : {
+
+    },
+    "Quality" : {
+
+    },
+    "Subtitles" : {
+
     }
   },
   "version" : "1.1"

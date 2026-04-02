@@ -5,6 +5,7 @@ extension Defaults.Keys {
     static let mirror = Key<URL>("mirror", default: Const.mirror)
     static let theme = Key<Theme>("theme", default: .system)
     static let defaultQuality = Key<DefaultQuality>("default_quality", default: .ask)
+    static let usePillarboxPlayerOnTvOS = Key<Bool>("use_pillarbox_player_tvos", default: true)
 
     static let spatialAudio = Key<SpatialAudio>("spatial_audio", default: .off)
     static let rate = Key<Float>("rate", default: 1.0)

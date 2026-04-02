@@ -8,6 +8,26 @@ import SwiftData
 import SwiftUI
 
 struct PlayerView: View {
+    @Default(.usePillarboxPlayerOnTvOS) private var usePillarboxPlayerOnTvOS
+
+    private let data: PlayerData
+
+    init(data: PlayerData) {
+        self.data = data
+    }
+
+    var body: some View {
+        Group {
+            if usePillarboxPlayerOnTvOS {
+                PillarboxPlayerView(data: data)
+            } else {
+                LegacyPlayerView(data: data)
+            }
+        }
+    }
+}
+
+struct LegacyPlayerView: View {
     @Injected(\.saveWatchingStateUseCase) private var saveWatchingStateUseCase
     @Injected(\.getMovieThumbnailsUseCase) private var getMovieThumbnailsUseCase
     @Injected(\.getMovieVideoUseCase) private var getMovieVideoUseCase
@@ -774,7 +794,7 @@ struct PlayerView: View {
     }
 }
 
-struct SystemVideoPlayer: UIViewControllerRepresentable {
+private struct SystemVideoPlayer: UIViewControllerRepresentable {
     let player: AVPlayer
 
     func makeUIViewController(context _: Context) -> AVPlayerViewController {

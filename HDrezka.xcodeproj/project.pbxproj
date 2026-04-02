@@ -13,6 +13,7 @@
 		04E5DC0A2C120C4200BF1B7A /* Flow in Frameworks */ = {isa = PBXBuildFile; productRef = 04E5DC092C120C4200BF1B7A /* Flow */; };
 		0F09A5872F190B9800E86182 /* YouTubeKit in Frameworks */ = {isa = PBXBuildFile; productRef = 0F09A5862F190B9800E86182 /* YouTubeKit */; };
 		0FE750EA2F2511AE00C54AE9 /* YouTubePlayerKit in Frameworks */ = {isa = PBXBuildFile; platformFilters = (ios, macos, ); productRef = 0FE750E92F2511AE00C54AE9 /* YouTubePlayerKit */; };
+		1A2B3C4D5E6F708192A3B4C5 /* PillarboxPlayer in Frameworks */ = {isa = PBXBuildFile; productRef = 1A2B3C4D5E6F708192A3B4C4 /* PillarboxPlayer */; };
 		DE188EE52CA6AB3100E7B1AE /* Pow in Frameworks */ = {isa = PBXBuildFile; productRef = DE188EE42CA6AB3100E7B1AE /* Pow */; };
 		DE2D67382DC3D5E900A9187C /* LicensesList in Frameworks */ = {isa = PBXBuildFile; productRef = DE2D67372DC3D5E900A9187C /* LicensesList */; };
 		DE3DCCE62DFB92050062CF81 /* SwiftFormat in Frameworks */ = {isa = PBXBuildFile; productRef = DE3DCCE52DFB92050062CF81 /* SwiftFormat */; };
@@ -180,6 +181,7 @@
 				tvOS/Presentations/Components/Cards/WatchingLaterCardView.swift = (tvos, );
 				tvOS/Presentations/Components/OnPressButtonStyle.swift = (tvos, );
 				tvOS/Presentations/Components/Player/CustomAVPlayer.swift = (tvos, );
+				tvOS/Presentations/Components/Player/PillarboxPlayerView.swift = (tvos, );
 				tvOS/Presentations/Components/Player/PlayerView.swift = (tvos, );
 				tvOS/Presentations/Components/Player/SliderWithText.swift = (tvos, );
 				tvOS/Presentations/Components/Player/SliderWithoutText.swift = (tvos, );
@@ -219,6 +221,7 @@
 			files = (
 				DEB035BA2C89E57A004ABFA1 /* Defaults in Frameworks */,
 				DE3DCCE62DFB92050062CF81 /* SwiftFormat in Frameworks */,
+				1A2B3C4D5E6F708192A3B4C5 /* PillarboxPlayer in Frameworks */,
 				043A2B722C036C7C0057721E /* OrderedCollections in Frameworks */,
 				0FE750EA2F2511AE00C54AE9 /* YouTubePlayerKit in Frameworks */,
 				04B25FD82BA46F9C00200341 /* Algorithms in Frameworks */,
@@ -283,6 +286,7 @@
 				04B25FD72BA46F9C00200341 /* Algorithms */,
 				043A2B712C036C7C0057721E /* OrderedCollections */,
 				04E5DC092C120C4200BF1B7A /* Flow */,
+				1A2B3C4D5E6F708192A3B4C4 /* PillarboxPlayer */,
 				DEE64D0A2C8869D0002C2F2F /* Sparkle */,
 				DEB035B42C89E1DB004ABFA1 /* FirebaseAnalytics */,
 				DEB035B62C89E1DB004ABFA1 /* FirebaseCrashlytics */,
@@ -331,6 +335,7 @@
 				04B25FD62BA46F9C00200341 /* XCRemoteSwiftPackageReference "swift-algorithms" */,
 				043A2B702C036C7C0057721E /* XCRemoteSwiftPackageReference "swift-collections" */,
 				04E5DC082C120C4200BF1B7A /* XCRemoteSwiftPackageReference "SwiftUI-Flow" */,
+				1A2B3C4D5E6F708192A3B4C3 /* XCRemoteSwiftPackageReference "pillarbox-apple" */,
 				DEE64D092C8869D0002C2F2F /* XCRemoteSwiftPackageReference "Sparkle" */,
 				DEB035B32C89E1DB004ABFA1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 				DEB035B82C89E57A004ABFA1 /* XCRemoteSwiftPackageReference "Defaults" */,
@@ -749,6 +754,15 @@
 				minimumVersion = 0.0.1;
 			};
 		};
+		1A2B3C4D5E6F708192A3B4C3 /* XCRemoteSwiftPackageReference "pillarbox-apple" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SRGSSR/pillarbox-apple.git";
+			requirement = {
+				kind = versionRange;
+				maximumVersion = 999.0.0;
+				minimumVersion = 0.0.1;
+			};
+		};
 		0F09A5852F190B9800E86182 /* XCRemoteSwiftPackageReference "YouTubeKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/alexeichhorn/YouTubeKit";
@@ -868,6 +882,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 04E5DC082C120C4200BF1B7A /* XCRemoteSwiftPackageReference "SwiftUI-Flow" */;
 			productName = Flow;
+		};
+		1A2B3C4D5E6F708192A3B4C4 /* PillarboxPlayer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1A2B3C4D5E6F708192A3B4C3 /* XCRemoteSwiftPackageReference "pillarbox-apple" */;
+			productName = PillarboxPlayer;
 		};
 		0F09A5862F190B9800E86182 /* YouTubeKit */ = {
 			isa = XCSwiftPackageProductDependency;
