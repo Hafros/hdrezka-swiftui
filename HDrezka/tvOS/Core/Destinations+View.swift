@@ -12,18 +12,17 @@ extension View {
     func destinations() -> some View {
         navigationDestination(for: Destinations.self) { destination in
             switch destination {
-//            case .watchingLater:
-//                WatchingLaterView()
-//                    .id("watching_later")
-//                    .analyticsScreen(name: destination.name, class: destination.className)
-//            case .bookmarks:
-//                BookmarksView()
-//                    .id("bookmarks")
-//                    .analyticsScreen(name: destination.name, class: destination.className)
+            case .watchingLater:
+                WatchingLaterView()
+                    .id("watching_later")
+                    .analyticsScreen(name: destination.name, class: destination.className)
+            case .bookmarks:
+                BookmarksView()
+                    .id("bookmarks")
+                    .analyticsScreen(name: destination.name, class: destination.className)
             case let .details(movie):
                 DetailsView(movie: movie)
                     .id(movie.movieId)
-
             default:
                 fatalError()
 //                    .analyticsScreen(name: destination.name, class: destination.className)

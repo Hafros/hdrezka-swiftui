@@ -127,7 +127,7 @@ enum Tabs: Hashable, Identifiable, CaseIterable, View {
             case .watchingLater:
                 WatchingLaterView()
                     .id("watching_later")
-//                    .destinations()
+                    .destinations()
                     .analyticsScreen(name: name, class: className)
             case .bookmarks:
                 BookmarksView()
