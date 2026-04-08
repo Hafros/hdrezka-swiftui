@@ -109,7 +109,7 @@ import SwiftUI
     private extension PillarboxPlayerView {
         func handlePlaybackStateChange(_ playbackState: PlaybackState) {
             guard playbackState == .ended else { return }
-            guard let next = nextEpisodeSelection() else { return }
+            guard nextEpisodeSelection() != nil else { return }
 
             playNextEpisode()
         }
@@ -536,44 +536,234 @@ import SwiftUI
         let selectedEpisode: MovieEpisode?
         let onSelect: (MovieSeason, MovieEpisode) -> Void
 
+        @State private var activeSeasonID: MovieSeason.ID?
+
+        init(seasons: [MovieSeason],
+             selectedSeason: MovieSeason?,
+             selectedEpisode: MovieEpisode?,
+             onSelect: @escaping (MovieSeason, MovieEpisode) -> Void)
+        {
+            self.seasons = seasons
+            self.selectedSeason = selectedSeason
+            self.selectedEpisode = selectedEpisode
+            self.onSelect = onSelect
+            _activeSeasonID = State(initialValue: selectedSeason?.id ?? seasons.first?.id)
+        }
+
         var body: some View {
-            List {
-                ForEach(seasons) { season in
-                    Section(season.name) {
-                        ForEach(season.episodes) { episode in
+            VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Choose Episode")
+                        .font(.title2.weight(.bold))
+
+                    if let activeSeason {
+                        Text("\(activeSeason.name) • \(activeSeason.episodes.count) episodes")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                ScrollView(.horizontal) {
+                    HStack(spacing: 14) {
+                        ForEach(seasons) { season in
                             Button {
-                                onSelect(season, episode)
-                            } label: {
-                                HStack(spacing: 16) {
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text(episode.name)
-                                            .foregroundStyle(.primary)
-
-                                        if isCurrentEpisode(season, episode) {
-                                            Text("Now Playing")
-                                                .font(.caption)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                    }
-
-                                    Spacer()
-
-                                    if isCurrentEpisode(season, episode) {
-                                        Image(systemName: "play.fill")
-                                            .foregroundStyle(.primary)
-                                    }
+                                withAnimation(.easeInOut(duration: 0.18)) {
+                                    activeSeasonID = season.id
                                 }
+                            } label: {
+                                SeasonPill(
+                                    title: season.name,
+                                    subtitle: "\(season.episodes.count)",
+                                    isSelected: season.id == activeSeasonID,
+                                )
+                            }
+                            .buttonStyle(OnPressButtonStyle { _ in })
+                            .focusEffectDisabled()
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                .scrollIndicators(.never)
+
+                ScrollView(.vertical) {
+                    LazyVGrid(
+                        columns: [GridItem(.adaptive(minimum: 240, maximum: 320), spacing: 18)],
+                        alignment: .leading,
+                        spacing: 18,
+                    ) {
+                        if let activeSeason {
+                            ForEach(Array(activeSeason.episodes.enumerated()), id: \.element.id) { index, episode in
+                                Button {
+                                    onSelect(activeSeason, episode)
+                                } label: {
+                                    EpisodeCard(
+                                        seasonName: activeSeason.name,
+                                        episode: episode,
+                                        episodeNumber: index + 1,
+                                        isCurrent: isCurrentEpisode(activeSeason, episode),
+                                    )
+                                }
+                                .buttonStyle(OnPressButtonStyle { _ in })
+                                .focusEffectDisabled()
                             }
                         }
                     }
+                    .padding(.vertical, 4)
                 }
+                .scrollIndicators(.visible)
             }
             .padding()
             .infoViewTabPanel()
+            .onChange(of: selectedSeason?.id) { _, newValue in
+                if let newValue {
+                    activeSeasonID = newValue
+                }
+            }
+        }
+
+        private var activeSeason: MovieSeason? {
+            seasons.first(where: { $0.id == activeSeasonID }) ?? selectedSeason ?? seasons.first
         }
 
         private func isCurrentEpisode(_ season: MovieSeason, _ episode: MovieEpisode) -> Bool {
             season == selectedSeason && episode == selectedEpisode
+        }
+    }
+
+    private struct SeasonPill: View {
+        let title: String
+        let subtitle: String
+        let isSelected: Bool
+
+        @Environment(\.isFocused) private var isFocused
+
+        var body: some View {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.headline.weight(.semibold))
+                        .lineLimit(1)
+
+                    Text(subtitle)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(.secondary)
+                }
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.white)
+                }
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+            .background(backgroundColor, in: Capsule())
+            .overlay {
+                Capsule()
+                    .strokeBorder(borderColor, lineWidth: isFocused ? 2 : 1)
+            }
+            .scaleEffect(isFocused ? 1.04 : 1.0)
+            .shadow(color: shadowColor, radius: isFocused ? 20 : 10, y: isFocused ? 10 : 6)
+            .animation(.easeOut(duration: 0.18), value: isFocused)
+        }
+
+        private var backgroundColor: Color {
+            if isSelected {
+                return Color.accentColor.opacity(isFocused ? 0.96 : 0.88)
+            }
+
+            return Color.white.opacity(isFocused ? 0.18 : 0.10)
+        }
+
+        private var borderColor: Color {
+            isFocused ? .white.opacity(0.92) : .white.opacity(isSelected ? 0.16 : 0.10)
+        }
+
+        private var shadowColor: Color {
+            isSelected ? Color.accentColor.opacity(isFocused ? 0.35 : 0.20) : Color.black.opacity(isFocused ? 0.30 : 0.16)
+        }
+    }
+
+    private struct EpisodeCard: View {
+        let seasonName: String
+        let episode: MovieEpisode
+        let episodeNumber: Int
+        let isCurrent: Bool
+
+        @Environment(\.isFocused) private var isFocused
+
+        var body: some View {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .top) {
+                    Text(String(format: "E%02d", episodeNumber))
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(isCurrent ? .white : .secondary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(isCurrent ? Color.accentColor : Color.white.opacity(0.08), in: Capsule())
+
+                    Spacer(minLength: 12)
+
+                    if isCurrent {
+                        Label("Now Playing", systemImage: "play.fill")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.white)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(episode.name)
+                        .font(.headline.weight(.semibold))
+                        .lineLimit(2)
+                        .foregroundStyle(.white)
+
+                    Text(seasonName)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
+
+                HStack(spacing: 8) {
+                    Image(systemName: isCurrent ? "play.circle.fill" : "tv")
+                        .font(.footnote.weight(.bold))
+
+                    Text(isCurrent ? "Current episode" : "Open episode")
+                        .font(.footnote.weight(.medium))
+                }
+                .foregroundStyle(isCurrent ? Color.white : Color.white.opacity(0.62))
+            }
+            .frame(maxWidth: .infinity, minHeight: 168, alignment: .topLeading)
+            .padding(20)
+            .background(backgroundColor, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 26, style: .continuous)
+                    .strokeBorder(borderColor, lineWidth: isFocused ? 2 : 1)
+            }
+            .scaleEffect(isFocused ? 1.03 : 1.0)
+            .shadow(color: shadowColor, radius: isFocused ? 20 : 10, y: isFocused ? 10 : 6)
+            .animation(.easeOut(duration: 0.18), value: isFocused)
+        }
+
+        private var backgroundColor: Color {
+            if isCurrent {
+                return Color.accentColor.opacity(isFocused ? 0.42 : 0.28)
+            }
+
+            return Color.white.opacity(isFocused ? 0.15 : 0.08)
+        }
+
+        private var borderColor: Color {
+            if isFocused {
+                return .white.opacity(0.92)
+            }
+
+            return isCurrent ? Color.accentColor.opacity(0.65) : Color.white.opacity(0.08)
+        }
+
+        private var shadowColor: Color {
+            isCurrent ? Color.accentColor.opacity(isFocused ? 0.34 : 0.18) : Color.black.opacity(isFocused ? 0.28 : 0.14)
         }
     }
 

@@ -1,0 +1,13 @@
+{
+  "info" : {
+    "author" : "com.hdrezka.underground",
+    "version" : 1
+  },
+  "properties" : {
+    "content-reference" : {
+      "matching-style" : "fully-qualified-name",
+      "name" : "HDrezkaTV-LargeBackground",
+      "type" : "image-set"
+    }
+  }
+}

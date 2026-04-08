@@ -1,6 +1,16 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "%@ • %lld episodes" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ • %2$lld episodes"
+          }
+        }
+      }
+    },
     "%@-%@" : {
       "localizations" : {
         "en" : {
@@ -22,6 +32,12 @@
       }
     },
     "%gx" : {
+
+    },
+    "Choose Episode" : {
+
+    },
+    "Current episode" : {
 
     },
     "key.2k" : {
@@ -7974,6 +7990,9 @@
     "Now Playing" : {
 
     },
+    "Open episode" : {
+
+    },
     "Playback Speed" : {
 
     },
@@ -7984,6 +8003,9 @@
 
     },
     "Subtitles" : {
+
+    },
+    "Trailer unavailable" : {
 
     }
   },

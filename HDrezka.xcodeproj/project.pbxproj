@@ -38,6 +38,7 @@
 			membershipExceptions = (
 				iOS/Resources/Info.plist,
 				macOS/Resources/Info.plist,
+				tvOS/Resources/Info.plist,
 			);
 			platformFiltersByRelativePath = {
 				iOS/Core/AppState.swift = (ios, tvos, );
@@ -178,6 +179,7 @@
 				tvOS/Presentations/CategoriesView.swift = (tvos, );
 				tvOS/Presentations/CollectionsView.swift = (tvos, );
 				tvOS/Presentations/Components/Cards/CardView.swift = (tvos, );
+				tvOS/Presentations/Components/Cards/TVPosterViewRepresentable.swift = (tvos, );
 				tvOS/Presentations/Components/Cards/WatchingLaterCardView.swift = (tvos, );
 				tvOS/Presentations/Components/OnPressButtonStyle.swift = (tvos, );
 				tvOS/Presentations/Components/Player/CustomAVPlayer.swift = (tvos, );
@@ -194,7 +196,9 @@
 				tvOS/Presentations/DetailsView/InfoRowWithButtons.swift = (tvos, );
 				tvOS/Presentations/DetailsView/PersonTextWithPhoto.swift = (tvos, );
 				tvOS/Presentations/DetailsView/StarsView.swift = (tvos, );
+				tvOS/Presentations/DetailsView/WatchSheetView.swift = (tvos, );
 				tvOS/Presentations/HomeView.swift = (tvos, );
+				tvOS/Presentations/ProfileView.swift = (tvos, );
 				tvOS/Presentations/SearchView.swift = (tvos, );
 				tvOS/Presentations/SignInView.swift = (tvos, );
 				tvOS/Presentations/WatchingLaterView.swift = (tvos, );
@@ -560,6 +564,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = HDrezka;
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=appletvos*]" = HDrezkaTV;
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=appletvsimulator*]" = HDrezkaTV;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				CLANG_USE_OPTIMIZATION_PROFILE = YES;
@@ -569,10 +575,11 @@
 				CODE_SIGN_IDENTITY = "";
 				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=iphone*]" = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 35;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -592,7 +599,11 @@
 				ENABLE_RESOURCE_ACCESS_USB = NO;
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GENERATE_INFOPLIST_FILE = YES;
+				"GENERATE_INFOPLIST_FILE[sdk=appletvos*]" = NO;
+				"GENERATE_INFOPLIST_FILE[sdk=appletvsimulator*]" = NO;
 				INFOPLIST_FILE = "";
+				"INFOPLIST_FILE[sdk=appletvos*]" = HDrezka/tvOS/Resources/Info.plist;
+				"INFOPLIST_FILE[sdk=appletvsimulator*]" = HDrezka/tvOS/Resources/Info.plist;
 				"INFOPLIST_FILE[sdk=iphone*]" = HDrezka/iOS/Resources/Info.plist;
 				"INFOPLIST_FILE[sdk=macosx*]" = HDrezka/macOS/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = HDrezka;
@@ -629,6 +640,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = HDrezka;
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=appletvos*]" = HDrezkaTV;
+				"ASSETCATALOG_COMPILER_APPICON_NAME[sdk=appletvsimulator*]" = HDrezkaTV;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				ASSETCATALOG_COMPILER_INCLUDE_ALL_APPICON_ASSETS = NO;
 				ASSETCATALOG_COMPILER_OPTIMIZATION = time;
@@ -637,11 +650,13 @@
 				"CODE_SIGN_ENTITLEMENTS[sdk=iphone*]" = HDrezka/iOS/Resources/HDrezka.entitlements;
 				"CODE_SIGN_ENTITLEMENTS[sdk=macosx*]" = HDrezka/macOS/Resources/HDrezka.entitlements;
 				CODE_SIGN_IDENTITY = "";
-				"CODE_SIGN_IDENTITY[sdk=iphone*]" = "";
+				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "Apple Development";
+				"CODE_SIGN_IDENTITY[sdk=iphone*]" = "-";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "Apple Development";
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 34;
+				CURRENT_PROJECT_VERSION = 35;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = EUMXSZ6Z6R;
@@ -661,7 +676,11 @@
 				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_OPTIMIZATION_LEVEL = 3;
 				GENERATE_INFOPLIST_FILE = YES;
+				"GENERATE_INFOPLIST_FILE[sdk=appletvos*]" = NO;
+				"GENERATE_INFOPLIST_FILE[sdk=appletvsimulator*]" = NO;
 				INFOPLIST_FILE = "";
+				"INFOPLIST_FILE[sdk=appletvos*]" = HDrezka/tvOS/Resources/Info.plist;
+				"INFOPLIST_FILE[sdk=appletvsimulator*]" = HDrezka/tvOS/Resources/Info.plist;
 				"INFOPLIST_FILE[sdk=iphone*]" = HDrezka/iOS/Resources/Info.plist;
 				"INFOPLIST_FILE[sdk=macosx*]" = HDrezka/macOS/Resources/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = HDrezka;
@@ -754,15 +773,6 @@
 				minimumVersion = 0.0.1;
 			};
 		};
-		1A2B3C4D5E6F708192A3B4C3 /* XCRemoteSwiftPackageReference "pillarbox-apple" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/SRGSSR/pillarbox-apple.git";
-			requirement = {
-				kind = versionRange;
-				maximumVersion = 999.0.0;
-				minimumVersion = 0.0.1;
-			};
-		};
 		0F09A5852F190B9800E86182 /* XCRemoteSwiftPackageReference "YouTubeKit" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/alexeichhorn/YouTubeKit";
@@ -777,6 +787,15 @@
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 2.0.5;
+			};
+		};
+		1A2B3C4D5E6F708192A3B4C3 /* XCRemoteSwiftPackageReference "pillarbox-apple" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/SRGSSR/pillarbox-apple.git";
+			requirement = {
+				kind = versionRange;
+				maximumVersion = 999.0.0;
+				minimumVersion = 0.0.1;
 			};
 		};
 		DE188EE32CA6AB3100E7B1AE /* XCRemoteSwiftPackageReference "Pow" */ = {
@@ -883,11 +902,6 @@
 			package = 04E5DC082C120C4200BF1B7A /* XCRemoteSwiftPackageReference "SwiftUI-Flow" */;
 			productName = Flow;
 		};
-		1A2B3C4D5E6F708192A3B4C4 /* PillarboxPlayer */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 1A2B3C4D5E6F708192A3B4C3 /* XCRemoteSwiftPackageReference "pillarbox-apple" */;
-			productName = PillarboxPlayer;
-		};
 		0F09A5862F190B9800E86182 /* YouTubeKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 0F09A5852F190B9800E86182 /* XCRemoteSwiftPackageReference "YouTubeKit" */;
@@ -897,6 +911,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 0FE750E82F2511AE00C54AE9 /* XCRemoteSwiftPackageReference "YouTubePlayerKit" */;
 			productName = YouTubePlayerKit;
+		};
+		1A2B3C4D5E6F708192A3B4C4 /* PillarboxPlayer */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1A2B3C4D5E6F708192A3B4C3 /* XCRemoteSwiftPackageReference "pillarbox-apple" */;
+			productName = PillarboxPlayer;
 		};
 		DE188EE42CA6AB3100E7B1AE /* Pow */ = {
 			isa = XCSwiftPackageProductDependency;

@@ -1,0 +1,20 @@
+{
+  "info" : {
+    "author" : "com.hdrezka.underground",
+    "version" : 1
+  },
+  "layers" : [
+    {
+      "filename" : "Back.imagestacklayer"
+    },
+    {
+      "filename" : "Front.imagestacklayer"
+    }
+  ],
+  "properties" : {
+    "canvasSize" : {
+      "width" : 400,
+      "height" : 240
+    }
+  }
+}
