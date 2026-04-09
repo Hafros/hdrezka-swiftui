@@ -1,7 +1,7 @@
 import AVFoundation
 import Defaults
 import Kingfisher
-import SwiftData
+import Perception
 import SwiftUI
 
 struct SettingsView: View {
@@ -15,11 +15,6 @@ struct SettingsView: View {
     @Default(.forceSnow) private var forceSnow
 
     @Environment(CookiesManager.self) private var cookiesManager
-
-    @Environment(\.modelContext) private var modelContext
-
-    @Query(animation: .easeInOut) private var playerPositions: [PlayerPosition]
-    @Query(animation: .easeInOut) private var selectPositions: [SelectPosition]
 
     @State private var mirror: URL?
     @State private var mirrorValid: Bool?
@@ -38,7 +33,7 @@ struct SettingsView: View {
                             .textFieldStyle(.plain)
                             .multilineTextAlignment(.trailing)
                             .autocorrectionDisabled()
-                            .onChange(of: mirror) {
+                            .onChange(of: mirror) { _ in
                                 withAnimation(.easeInOut) {
                                     mirrorValid = nil
                                 }
@@ -171,16 +166,13 @@ struct SettingsView: View {
                     Divider()
 
                     HStack(alignment: .center, spacing: 8) {
-                        Text("key.playerPositions-\(playerPositions.count)")
+                        Text("key.playerPositions-\(playerPositionsCount)")
                             .monospacedDigit()
-                            .contentTransition(.numericText(value: Double(playerPositions.count)))
 
                         Spacer()
 
                         Button {
-                            for position in playerPositions {
-                                modelContext.delete(position)
-                            }
+                            clearPlayerPositions()
                         } label: {
                             Image(systemName: "trash")
                                 .foregroundStyle(Color.accentColor)
@@ -191,7 +183,7 @@ struct SettingsView: View {
                                 .overlay(Color.accentColor, in: .rect(cornerRadius: 6).stroke(lineWidth: 1))
                         }
                         .buttonStyle(.plain)
-                        .disabled(playerPositions.isEmpty)
+                        .disabled(playerPositionsCount == 0)
                     }
                     .frame(height: 40)
 
@@ -199,16 +191,13 @@ struct SettingsView: View {
                         Divider()
 
                         HStack(alignment: .center, spacing: 8) {
-                            Text("key.selectPositions-\(selectPositions.count)")
+                            Text("key.selectPositions-\(selectPositionsCount)")
                                 .monospacedDigit()
-                                .contentTransition(.numericText(value: Double(selectPositions.count)))
 
                             Spacer()
 
                             Button {
-                                for position in selectPositions {
-                                    modelContext.delete(position)
-                                }
+                                clearSelectPositions()
                             } label: {
                                 Image(systemName: "trash")
                                     .foregroundStyle(Color.accentColor)
@@ -219,7 +208,7 @@ struct SettingsView: View {
                                     .overlay(Color.accentColor, in: .rect(cornerRadius: 6).stroke(lineWidth: 1))
                             }
                             .buttonStyle(.plain)
-                            .disabled(selectPositions.isEmpty)
+                            .disabled(selectPositionsCount == 0)
                         }
                         .frame(height: 40)
                     }
@@ -241,7 +230,7 @@ struct SettingsView: View {
                         .pickerStyle(.menu)
                     }
                     .frame(height: 40)
-                    .onChange(of: cache) {
+                    .onChange(of: cache) { _ in
                         let defaultCache = ImageCache.default
 
                         switch cache {
@@ -305,7 +294,7 @@ struct SettingsView: View {
             }
             .padding(25)
             .background(.background)
-            .onChange(of: currentMirror) {
+            .onChange(of: currentMirror) { _ in
                 mirror = nil
             }
         }
@@ -321,5 +310,21 @@ struct SettingsView: View {
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.large)
         .background(.background)
+    }
+
+    private var playerPositionsCount: Int {
+        PositionsStore.playerPositionsCount()
+    }
+
+    private var selectPositionsCount: Int {
+        PositionsStore.selectPositionsCount()
+    }
+
+    private func clearPlayerPositions() {
+        PositionsStore.clearPlayerPositions()
+    }
+
+    private func clearSelectPositions() {
+        PositionsStore.clearSelectPositions()
     }
 }

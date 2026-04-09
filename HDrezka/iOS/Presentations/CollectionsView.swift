@@ -1,4 +1,5 @@
 import Defaults
+import Perception
 import SwiftUI
 
 struct CollectionsView: View {
@@ -11,75 +12,73 @@ struct CollectionsView: View {
     ]
 
     var body: some View {
-        ScrollView(.vertical) {
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 18) {
-                if let collections = viewModel.state.data, !collections.isEmpty {
-                    ForEach(collections) { collection in
-                        CollectionCardView(collection: collection)
+        WithPerceptionTracking {
+            ScrollView(.vertical) {
+                LazyVGrid(columns: columns, alignment: .leading, spacing: 18) {
+                    if let collections = viewModel.state.data, !collections.isEmpty {
+                        ForEach(collections) { collection in
+                            CollectionCardView(collection: collection)
+                                .onAppear {
+                                    if viewModel.paginationState == .idle,
+                                       collection.id == collections.last?.id
+                                    {
+                                        viewModel.loadMore()
+                                    }
+                                }
+                        }
                     }
                 }
-            }
-            .scrollTargetLayout()
-            .padding(.vertical, 18)
-            .padding(.horizontal, 36)
+                .padding(.vertical, 18)
+                .padding(.horizontal, 36)
 
-            if viewModel.paginationState == .loading {
-                LoadingPaginationStateView()
-            }
-        }
-        .scrollIndicators(.visible, axes: .vertical)
-        .onScrollTargetVisibilityChange(idType: MoviesCollection.ID.self) { onScreenCards in
-            if viewModel.paginationState == .idle,
-               let collections = viewModel.state.data,
-               !collections.isEmpty,
-               let last = collections.last,
-               onScreenCards.contains(where: { $0 == last.id })
-            {
-                viewModel.loadMore()
-            }
-        }
-        .viewModifier { view in
-            if #available(iOS 26, *) {
-                view.scrollEdgeEffectStyle(.soft, for: .all)
-            } else {
-                view
-            }
-        }
-        .overlay {
-            if let error = viewModel.state.error {
-                ErrorStateView(error) {
-                    viewModel.load()
+                if viewModel.paginationState == .loading {
+                    LoadingPaginationStateView()
                 }
-                .padding(.vertical, 18)
-                .padding(.horizontal, 36)
-            } else if let collections = viewModel.state.data, collections.isEmpty {
-                EmptyStateView(String(localized: "key.collections.empty")) {
-                    viewModel.load()
+            }
+            .scrollIndicators(.visible, axes: .vertical)
+            .viewModifier { view in
+                if #available(iOS 26, *) {
+                    view.scrollEdgeEffectStyle(.soft, for: .all)
+                } else {
+                    view
                 }
-                .padding(.vertical, 18)
-                .padding(.horizontal, 36)
-            } else if viewModel.state == .loading {
-                LoadingStateView()
+            }
+            .overlay {
+                if let error = viewModel.state.error {
+                    ErrorStateView(error) {
+                        viewModel.load()
+                    }
                     .padding(.vertical, 18)
                     .padding(.horizontal, 36)
+                } else if let collections = viewModel.state.data, collections.isEmpty {
+                    EmptyStateView(String(localized: "key.collections.empty")) {
+                        viewModel.load()
+                    }
+                    .padding(.vertical, 18)
+                    .padding(.horizontal, 36)
+                } else if viewModel.state == .loading {
+                    LoadingStateView()
+                        .padding(.vertical, 18)
+                        .padding(.horizontal, 36)
+                }
             }
-        }
-        .transition(.opacity)
-        .navigationTitle(title)
-        .navigationBarTitleDisplayMode(.large)
-        .onAppear {
-            switch viewModel.state {
-            case .data:
-                break
-            default:
-                viewModel.load()
+            .transition(.opacity)
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.large)
+            .onAppear {
+                switch viewModel.state {
+                case .data:
+                    break
+                default:
+                    viewModel.load()
+                }
             }
-        }
-        .refreshable {
-            if viewModel.state.data?.isEmpty == false {
-                viewModel.load()
+            .refreshable {
+                if viewModel.state.data?.isEmpty == false {
+                    viewModel.load()
+                }
             }
+            .background(.background)
         }
-        .background(.background)
     }
 }

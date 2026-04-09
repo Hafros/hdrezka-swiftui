@@ -4,7 +4,6 @@ import FirebaseAnalytics
 import FirebaseCore
 import FirebaseCrashlytics
 import Kingfisher
-import SwiftData
 import SwiftUI
 import UserNotifications
 
@@ -80,35 +79,22 @@ struct HDrezkaApp: App {
     @State private var downloader: Downloader = .shared
     @State private var cookiesManager: CookiesManager = .shared
 
-    @State private var modelContainer: ModelContainer
-
     @Default(.theme) private var theme
     @Default(.isFirstLaunch) private var isFirstLaunch
 
     init() {
-        do {
-            let schema = Schema([PlayerPosition.self, SelectPosition.self])
-            let modelContainer = try ModelContainer(for: schema)
-            modelContainer.mainContext.autosaveEnabled = true
-            self.modelContainer = modelContainer
+        let cache = ImageCache.default
 
-            Downloader.shared.setModelContext(modelContext: modelContainer.mainContext)
-
-            let cache = ImageCache.default
-
-            switch Defaults[.cache] {
-            case .off:
-                cache.memoryStorage.config.expiration = .expired
-                cache.diskStorage.config.expiration = .expired
-            case .memory:
-                cache.diskStorage.config.expiration = .expired
-            case .disk:
-                cache.memoryStorage.config.expiration = .expired
-            case .all:
-                break
-            }
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+        switch Defaults[.cache] {
+        case .off:
+            cache.memoryStorage.config.expiration = .expired
+            cache.diskStorage.config.expiration = .expired
+        case .memory:
+            cache.diskStorage.config.expiration = .expired
+        case .disk:
+            cache.memoryStorage.config.expiration = .expired
+        case .all:
+            break
         }
     }
 
@@ -120,7 +106,6 @@ struct HDrezkaApp: App {
                 .environment(cookiesManager)
                 .preferredColorScheme(theme.scheme)
         }
-        .modelContainer(modelContainer)
         .commands(content: customCommands)
         .commands(content: removed)
     }

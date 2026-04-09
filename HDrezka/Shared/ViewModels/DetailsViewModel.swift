@@ -1,20 +1,21 @@
 import Combine
 import FactoryKit
+import Perception
 import SwiftUI
 
-@Observable
+@Perceptible
 class DetailsViewModel {
-    @ObservationIgnored @LazyInjected(\.getMovieDetailsUseCase) private var getMovieDetailsUseCase
-    @ObservationIgnored @LazyInjected(\.getMovieTrailerIdUseCase) private var getMovieTrailerIdUseCase
-    @ObservationIgnored @LazyInjected(\.rateUseCase) private var rateUseCase
+    @PerceptionIgnored @LazyInjected(\.getMovieDetailsUseCase) private var getMovieDetailsUseCase
+    @PerceptionIgnored @LazyInjected(\.getMovieTrailerIdUseCase) private var getMovieTrailerIdUseCase
+    @PerceptionIgnored @LazyInjected(\.rateUseCase) private var rateUseCase
 
-    @ObservationIgnored let id: String
+    @PerceptionIgnored let id: String
 
     init(id: String) {
         self.id = id
     }
 
-    @ObservationIgnored private var subscriptions: Set<AnyCancellable> = []
+    @PerceptionIgnored private var subscriptions: Set<AnyCancellable> = []
 
     private(set) var state: DataState<MovieDetailed> = .loading
     private(set) var trailerId: String?
@@ -33,17 +34,17 @@ class DetailsViewModel {
             } receiveValue: { detail in
                 withAnimation(.easeInOut) {
                     self.state = .data(detail)
-                } completion: {
-                    if let movieId = detail.movieId.id {
-                        self.getMovieTrailerIdUseCase(movieId: movieId)
-                            .receive(on: DispatchQueue.main)
-                            .sink { _ in } receiveValue: { trailerId in
-                                withAnimation(.easeInOut) {
-                                    self.trailerId = trailerId
-                                }
+                }
+
+                if let movieId = detail.movieId.id {
+                    self.getMovieTrailerIdUseCase(movieId: movieId)
+                        .receive(on: DispatchQueue.main)
+                        .sink { _ in } receiveValue: { trailerId in
+                            withAnimation(.easeInOut) {
+                                self.trailerId = trailerId
                             }
-                            .store(in: &self.subscriptions)
-                    }
+                        }
+                        .store(in: &self.subscriptions)
                 }
             }
             .store(in: &subscriptions)

@@ -20,6 +20,7 @@
 		DE3EF0392CFF04CA0022C311 /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = DE3EF0382CFF04CA0022C311 /* Alamofire */; };
 		DE4AD63E2EAA4A7200CE7AB3 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = DE4AD63D2EAA4A7200CE7AB3 /* Kingfisher */; };
 		DE7608DA2EB4231600C4A23E /* LRUCache in Frameworks */ = {isa = PBXBuildFile; productRef = DE7608D92EB4231600C4A23E /* LRUCache */; };
+		DE9A6E1B2F5D3A7900A1B2C3 /* Perception in Frameworks */ = {isa = PBXBuildFile; productRef = DE9A6E1A2F5D3A7900A1B2C3 /* Perception */; };
 		DEB035B52C89E1DB004ABFA1 /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = DEB035B42C89E1DB004ABFA1 /* FirebaseAnalytics */; };
 		DEB035B72C89E1DB004ABFA1 /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = DEB035B62C89E1DB004ABFA1 /* FirebaseCrashlytics */; };
 		DEB035BA2C89E57A004ABFA1 /* Defaults in Frameworks */ = {isa = PBXBuildFile; productRef = DEB035B92C89E57A004ABFA1 /* Defaults */; };
@@ -223,6 +224,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				DE9A6E1B2F5D3A7900A1B2C3 /* Perception in Frameworks */,
 				DEB035BA2C89E57A004ABFA1 /* Defaults in Frameworks */,
 				DE3DCCE62DFB92050062CF81 /* SwiftFormat in Frameworks */,
 				1A2B3C4D5E6F708192A3B4C5 /* PillarboxPlayer in Frameworks */,
@@ -302,6 +304,7 @@
 				DE3DCCE52DFB92050062CF81 /* SwiftFormat */,
 				DE4AD63D2EAA4A7200CE7AB3 /* Kingfisher */,
 				DE7608D92EB4231600C4A23E /* LRUCache */,
+				DE9A6E1A2F5D3A7900A1B2C3 /* Perception */,
 				0F09A5862F190B9800E86182 /* YouTubeKit */,
 				0FE750E92F2511AE00C54AE9 /* YouTubePlayerKit */,
 			);
@@ -349,6 +352,7 @@
 				DE3DCCE42DFB92050062CF81 /* XCRemoteSwiftPackageReference "SwiftFormat" */,
 				DE4AD63C2EAA4A7200CE7AB3 /* XCRemoteSwiftPackageReference "Kingfisher" */,
 				DE7608D82EB4231600C4A23E /* XCRemoteSwiftPackageReference "LRUCache" */,
+				DE9A6E192F5D3A7900A1B2C3 /* XCRemoteSwiftPackageReference "swift-perception" */,
 				0F09A5852F190B9800E86182 /* XCRemoteSwiftPackageReference "YouTubeKit" */,
 				0FE750E82F2511AE00C54AE9 /* XCRemoteSwiftPackageReference "YouTubePlayerKit" */,
 			);
@@ -579,7 +583,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 35;
+				CURRENT_PROJECT_VERSION = 45;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -618,7 +622,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphone*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
@@ -656,7 +660,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 35;
+				CURRENT_PROJECT_VERSION = 45;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = EUMXSZ6Z6R;
@@ -695,7 +699,7 @@
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphone*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.4;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
@@ -843,6 +847,14 @@
 				minimumVersion = 0.0.1;
 			};
 		};
+		DE9A6E192F5D3A7900A1B2C3 /* XCRemoteSwiftPackageReference "swift-perception" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-perception";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.9;
+			};
+		};
 		DEB035B32C89E1DB004ABFA1 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
@@ -945,6 +957,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = DE7608D82EB4231600C4A23E /* XCRemoteSwiftPackageReference "LRUCache" */;
 			productName = LRUCache;
+		};
+		DE9A6E1A2F5D3A7900A1B2C3 /* Perception */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = DE9A6E192F5D3A7900A1B2C3 /* XCRemoteSwiftPackageReference "swift-perception" */;
+			productName = Perception;
 		};
 		DEB035B42C89E1DB004ABFA1 /* FirebaseAnalytics */ = {
 			isa = XCSwiftPackageProductDependency;

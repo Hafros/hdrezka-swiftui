@@ -1,21 +1,19 @@
 import Combine
 import Defaults
 import FactoryKit
+import Perception
 import Photos
-import SwiftData
 import UserNotifications
 
-@Observable
+@Perceptible
 class Downloader {
-    @ObservationIgnored static let shared = Downloader()
+    @PerceptionIgnored static let shared = Downloader()
 
-    @ObservationIgnored private var modelContext: ModelContext?
+    @PerceptionIgnored private var subscriptions: Set<AnyCancellable> = []
 
-    @ObservationIgnored private var subscriptions: Set<AnyCancellable> = []
-
-    @ObservationIgnored @LazyInjected(\.session) private var session
-    @ObservationIgnored @LazyInjected(\.saveWatchingStateUseCase) private var saveWatchingStateUseCase
-    @ObservationIgnored @LazyInjected(\.getMovieVideoUseCase) private var getMovieVideoUseCase
+    @PerceptionIgnored @LazyInjected(\.session) private var session
+    @PerceptionIgnored @LazyInjected(\.saveWatchingStateUseCase) private var saveWatchingStateUseCase
+    @PerceptionIgnored @LazyInjected(\.getMovieVideoUseCase) private var getMovieVideoUseCase
 
     var downloads: [Download] = []
 
@@ -37,8 +35,13 @@ class Downloader {
         #endif
     }
 
-    func setModelContext(modelContext: ModelContext) {
-        self.modelContext = modelContext
+    private func persistSelectPosition(_ data: DownloadData, season: MovieSeason? = nil, episode: MovieEpisode? = nil) {
+        PositionsStore.upsertSelectPosition(
+            id: data.acting.voiceId,
+            acting: data.acting.translatorId,
+            season: season?.seasonId,
+            episode: episode?.episodeId,
+        )
     }
 
     private func notificate(_ id: String, _ title: String, _ subtitle: String? = nil, _ category: String? = nil, _ userInfo: [AnyHashable: Any] = [:]) async {
@@ -68,7 +71,7 @@ class Downloader {
         #endif
     }
 
-    @ObservationIgnored
+    @PerceptionIgnored
     private var isAccessAllowed: Bool {
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
 
@@ -195,24 +198,7 @@ class Downloader {
                                         .store(in: &self.subscriptions)
                                 }
 
-                                if let modelContext = self.modelContext {
-                                    if let position = try? modelContext.fetch(FetchDescriptor<SelectPosition>(predicate: nil)).first(where: { position in
-                                        position.id == data.acting.voiceId
-                                    }) {
-                                        position.acting = data.acting.translatorId
-                                        position.season = season.seasonId
-                                        position.episode = episode.episodeId
-                                    } else {
-                                        let position = SelectPosition(
-                                            id: data.acting.voiceId,
-                                            acting: data.acting.translatorId,
-                                            season: season.seasonId,
-                                            episode: episode.episodeId,
-                                        )
-
-                                        modelContext.insert(position)
-                                    }
-                                }
+                                self.persistSelectPosition(data, season: season, episode: episode)
 
                                 if let movieUrl = movie.getClosestTo(quality: data.quality) {
                                     Task { [weak self] in
@@ -312,20 +298,7 @@ class Downloader {
                                         .store(in: &self.subscriptions)
                                 }
 
-                                if let modelContext = self.modelContext {
-                                    if let position = try? modelContext.fetch(FetchDescriptor<SelectPosition>(predicate: nil)).first(where: { position in
-                                        position.id == data.acting.voiceId
-                                    }) {
-                                        position.acting = data.acting.translatorId
-                                    } else {
-                                        let position = SelectPosition(
-                                            id: data.acting.voiceId,
-                                            acting: data.acting.translatorId,
-                                        )
-
-                                        modelContext.insert(position)
-                                    }
-                                }
+                                self.persistSelectPosition(data)
 
                                 if let movieUrl = movie.getClosestTo(quality: data.quality) {
                                     Task { [weak self] in

@@ -1,19 +1,20 @@
 import Combine
 import FactoryKit
+import Perception
 import SwiftUI
 
-@Observable
+@Perceptible
 class CommentsViewModel {
-    @ObservationIgnored @LazyInjected(\.getCommentsPageUseCase) private var getCommentsPageUseCase
-    @ObservationIgnored @LazyInjected(\.getCommentUseCase) private var getCommentUseCase
-    @ObservationIgnored @LazyInjected(\.toggleLikeCommentUseCase) private var toggleLikeCommentUseCase
-    @ObservationIgnored @LazyInjected(\.deleteCommentUseCase) private var deleteCommentUseCase
-    @ObservationIgnored @LazyInjected(\.sendCommentUseCase) private var sendCommentUseCase
-    @ObservationIgnored @LazyInjected(\.getLikesUseCase) private var getLikesUseCase
+    @PerceptionIgnored @LazyInjected(\.getCommentsPageUseCase) private var getCommentsPageUseCase
+    @PerceptionIgnored @LazyInjected(\.getCommentUseCase) private var getCommentUseCase
+    @PerceptionIgnored @LazyInjected(\.toggleLikeCommentUseCase) private var toggleLikeCommentUseCase
+    @PerceptionIgnored @LazyInjected(\.deleteCommentUseCase) private var deleteCommentUseCase
+    @PerceptionIgnored @LazyInjected(\.sendCommentUseCase) private var sendCommentUseCase
+    @PerceptionIgnored @LazyInjected(\.getLikesUseCase) private var getLikesUseCase
 
-    @ObservationIgnored private let id: String
-    @ObservationIgnored private let adb: String?
-    @ObservationIgnored private let type: String?
+    @PerceptionIgnored private let id: String
+    @PerceptionIgnored private let adb: String?
+    @PerceptionIgnored private let type: String?
 
     init(id: String, adb: String?, type: String?) {
         self.id = id
@@ -21,7 +22,7 @@ class CommentsViewModel {
         self.type = type
     }
 
-    @ObservationIgnored private var subscriptions: Set<AnyCancellable> = []
+    @PerceptionIgnored private var subscriptions: Set<AnyCancellable> = []
 
     private(set) var state: DataState<[Comment]> = .loading
     private(set) var paginationState: DataPaginationState = .idle
@@ -37,7 +38,7 @@ class CommentsViewModel {
     private(set) var message: String?
     var likes: [String: Likes] = [:]
 
-    @ObservationIgnored private var page = 1
+    @PerceptionIgnored private var page = 1
 
     func getData(movieId: String, isInitial: Bool = true) {
         getCommentsPageUseCase(movieId: movieId, page: page)

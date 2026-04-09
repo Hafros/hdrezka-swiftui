@@ -1,39 +1,40 @@
 import Combine
 import Defaults
 import FactoryKit
+import Perception
 import SwiftUI
 
-@Observable
+@Perceptible
 class ListViewModel {
-//    @ObservationIgnored @LazyInjected(\.getFeaturedMoviesUseCase) private var getFeaturedMoviesUseCase
-    @ObservationIgnored @LazyInjected(\.getHotMoviesUseCase) private var getHotMoviesUseCase
-    @ObservationIgnored @LazyInjected(\.getLatestMoviesByCountryUseCase) private var getLatestMoviesByCountryUseCase
-    @ObservationIgnored @LazyInjected(\.getLatestMoviesByGenreUseCase) private var getLatestMoviesByGenreUseCase
-    @ObservationIgnored @LazyInjected(\.getLatestMoviesUseCase) private var getLatestMoviesUseCase
-    @ObservationIgnored @LazyInjected(\.getLatestNewestMoviesUseCase) private var getLatestNewestMoviesUseCase
-    @ObservationIgnored @LazyInjected(\.getMovieListUseCase) private var getMovieListUseCase
-    @ObservationIgnored @LazyInjected(\.getPopularMoviesByCountryUseCase) private var getPopularMoviesByCountryUseCase
-    @ObservationIgnored @LazyInjected(\.getPopularMoviesByGenreUseCase) private var getPopularMoviesByGenreUseCase
-    @ObservationIgnored @LazyInjected(\.getPopularMoviesUseCase) private var getPopularMoviesUseCase
-    @ObservationIgnored @LazyInjected(\.getPopularNewestMoviesUseCase) private var getPopularNewestMoviesUseCase
-    @ObservationIgnored @LazyInjected(\.getSoonMoviesByCountryUseCase) private var getSoonMoviesByCountryUseCase
-    @ObservationIgnored @LazyInjected(\.getSoonMoviesByGenreUseCase) private var getSoonMoviesByGenreUseCase
-    @ObservationIgnored @LazyInjected(\.getSoonMoviesUseCase) private var getSoonMoviesUseCase
-    @ObservationIgnored @LazyInjected(\.getWatchingNowMoviesByCountryUseCase) private var getWatchingNowMoviesByCountryUseCase
-    @ObservationIgnored @LazyInjected(\.getWatchingNowMoviesByGenreUseCase) private var getWatchingNowMoviesByGenreUseCase
-    @ObservationIgnored @LazyInjected(\.getWatchingNowMoviesUseCase) private var getWatchingNowMoviesUseCase
-    @ObservationIgnored @LazyInjected(\.getWatchingNowNewestMoviesUseCase) private var getWatchingNowNewestMoviesUseCase
-    @ObservationIgnored @LazyInjected(\.getLatestMoviesInCollectionUseCase) private var getLatestMoviesInCollectionUseCase
-    @ObservationIgnored @LazyInjected(\.getSoonMoviesInCollectionUseCase) private var getSoonMoviesInCollectionUseCase
-    @ObservationIgnored @LazyInjected(\.getPopularMoviesInCollectionUseCase) private var getPopularMoviesInCollectionUseCase
-    @ObservationIgnored @LazyInjected(\.getWatchingNowMoviesInCollectionUseCase) private var getWatchingNowMoviesInCollectionUseCase
+//    @PerceptionIgnored @LazyInjected(\.getFeaturedMoviesUseCase) private var getFeaturedMoviesUseCase
+    @PerceptionIgnored @LazyInjected(\.getHotMoviesUseCase) private var getHotMoviesUseCase
+    @PerceptionIgnored @LazyInjected(\.getLatestMoviesByCountryUseCase) private var getLatestMoviesByCountryUseCase
+    @PerceptionIgnored @LazyInjected(\.getLatestMoviesByGenreUseCase) private var getLatestMoviesByGenreUseCase
+    @PerceptionIgnored @LazyInjected(\.getLatestMoviesUseCase) private var getLatestMoviesUseCase
+    @PerceptionIgnored @LazyInjected(\.getLatestNewestMoviesUseCase) private var getLatestNewestMoviesUseCase
+    @PerceptionIgnored @LazyInjected(\.getMovieListUseCase) private var getMovieListUseCase
+    @PerceptionIgnored @LazyInjected(\.getPopularMoviesByCountryUseCase) private var getPopularMoviesByCountryUseCase
+    @PerceptionIgnored @LazyInjected(\.getPopularMoviesByGenreUseCase) private var getPopularMoviesByGenreUseCase
+    @PerceptionIgnored @LazyInjected(\.getPopularMoviesUseCase) private var getPopularMoviesUseCase
+    @PerceptionIgnored @LazyInjected(\.getPopularNewestMoviesUseCase) private var getPopularNewestMoviesUseCase
+    @PerceptionIgnored @LazyInjected(\.getSoonMoviesByCountryUseCase) private var getSoonMoviesByCountryUseCase
+    @PerceptionIgnored @LazyInjected(\.getSoonMoviesByGenreUseCase) private var getSoonMoviesByGenreUseCase
+    @PerceptionIgnored @LazyInjected(\.getSoonMoviesUseCase) private var getSoonMoviesUseCase
+    @PerceptionIgnored @LazyInjected(\.getWatchingNowMoviesByCountryUseCase) private var getWatchingNowMoviesByCountryUseCase
+    @PerceptionIgnored @LazyInjected(\.getWatchingNowMoviesByGenreUseCase) private var getWatchingNowMoviesByGenreUseCase
+    @PerceptionIgnored @LazyInjected(\.getWatchingNowMoviesUseCase) private var getWatchingNowMoviesUseCase
+    @PerceptionIgnored @LazyInjected(\.getWatchingNowNewestMoviesUseCase) private var getWatchingNowNewestMoviesUseCase
+    @PerceptionIgnored @LazyInjected(\.getLatestMoviesInCollectionUseCase) private var getLatestMoviesInCollectionUseCase
+    @PerceptionIgnored @LazyInjected(\.getSoonMoviesInCollectionUseCase) private var getSoonMoviesInCollectionUseCase
+    @PerceptionIgnored @LazyInjected(\.getPopularMoviesInCollectionUseCase) private var getPopularMoviesInCollectionUseCase
+    @PerceptionIgnored @LazyInjected(\.getWatchingNowMoviesInCollectionUseCase) private var getWatchingNowMoviesInCollectionUseCase
 
-    @ObservationIgnored private let list: MovieList?
-    @ObservationIgnored private let country: MovieCountry?
-    @ObservationIgnored private let genre: MovieGenre?
-    @ObservationIgnored private let category: Categories?
-    @ObservationIgnored private let collection: MoviesCollection?
-    @ObservationIgnored private let movies: [MovieSimple]?
+    @PerceptionIgnored private let list: MovieList?
+    @PerceptionIgnored private let country: MovieCountry?
+    @PerceptionIgnored private let genre: MovieGenre?
+    @PerceptionIgnored private let category: Categories?
+    @PerceptionIgnored private let collection: MoviesCollection?
+    @PerceptionIgnored private let movies: [MovieSimple]?
 
     init(list: MovieList? = nil, country: MovieCountry? = nil, genre: MovieGenre? = nil, category: Categories? = nil, collection: MoviesCollection? = nil, movies: [MovieSimple]? = nil, title: String? = nil) {
         self.list = list
@@ -88,7 +89,7 @@ class ListViewModel {
         collection != nil
     }
 
-    @ObservationIgnored private var subscriptions: Set<AnyCancellable> = []
+    @PerceptionIgnored private var subscriptions: Set<AnyCancellable> = []
 
     private(set) var state: DataState<[MovieSimple]> = .loading
     private(set) var paginationState: DataPaginationState = .idle
@@ -99,7 +100,7 @@ class ListViewModel {
     var filter = Filters.latest
     var newFilter = NewFilters.latest
 
-    @ObservationIgnored private var page = 1
+    @PerceptionIgnored private var page = 1
 
     private func getData(isInitial: Bool = true) {
         if let list {

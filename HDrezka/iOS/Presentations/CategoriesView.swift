@@ -1,5 +1,6 @@
 import Defaults
 import Flow
+import Perception
 import SwiftUI
 
 struct CategoriesView: View {
@@ -8,67 +9,69 @@ struct CategoriesView: View {
     @State private var viewModel = CategoriesViewModel()
 
     var body: some View {
-        ScrollView(.vertical) {
-            LazyVStack(alignment: .leading, spacing: 18) {
-                if let types = viewModel.state.data, !types.isEmpty {
-                    ForEach(types) { type in
-                        if let typeView = TypeView(type: type) {
-                            typeView
+        WithPerceptionTracking {
+            ScrollView(.vertical) {
+                LazyVStack(alignment: .leading, spacing: 18) {
+                    if let types = viewModel.state.data, !types.isEmpty {
+                        ForEach(types) { type in
+                            if let typeView = TypeView(type: type) {
+                                typeView
 
-                            if type != types.last {
-                                Divider()
+                                if type != types.last {
+                                    Divider()
+                                }
                             }
                         }
                     }
                 }
-            }
-            .padding(.vertical, 18)
-            .padding(.horizontal, 36)
-        }
-        .scrollIndicators(.visible, axes: .vertical)
-        .viewModifier { view in
-            if #available(iOS 26, *) {
-                view.scrollEdgeEffectStyle(.soft, for: .all)
-            } else {
-                view
-            }
-        }
-        .overlay {
-            if let error = viewModel.state.error {
-                ErrorStateView(error) {
-                    viewModel.load()
-                }
                 .padding(.vertical, 18)
                 .padding(.horizontal, 36)
-            } else if let types = viewModel.state.data, types.isEmpty {
-                EmptyStateView(String(localized: "key.categories.empty")) {
-                    viewModel.load()
+            }
+            .scrollIndicators(.visible, axes: .vertical)
+            .viewModifier { view in
+                if #available(iOS 26, *) {
+                    view.scrollEdgeEffectStyle(.soft, for: .all)
+                } else {
+                    view
                 }
-                .padding(.vertical, 18)
-                .padding(.horizontal, 36)
-            } else if viewModel.state == .loading {
-                LoadingStateView()
+            }
+            .overlay {
+                if let error = viewModel.state.error {
+                    ErrorStateView(error) {
+                        viewModel.load()
+                    }
                     .padding(.vertical, 18)
                     .padding(.horizontal, 36)
+                } else if let types = viewModel.state.data, types.isEmpty {
+                    EmptyStateView(String(localized: "key.categories.empty")) {
+                        viewModel.load()
+                    }
+                    .padding(.vertical, 18)
+                    .padding(.horizontal, 36)
+                } else if viewModel.state == .loading {
+                    LoadingStateView()
+                        .padding(.vertical, 18)
+                        .padding(.horizontal, 36)
+                }
             }
-        }
-        .transition(.opacity)
-        .navigationTitle(title)
-        .navigationBarTitleDisplayMode(.large)
-        .onAppear {
-            switch viewModel.state {
-            case .data:
-                break
-            default:
-                viewModel.load()
+            .transition(.opacity)
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.large)
+            .onAppear {
+                switch viewModel.state {
+                case .data:
+                    break
+                default:
+                    viewModel.load()
+                }
             }
-        }
-        .refreshable {
-            if viewModel.state.data?.isEmpty == false {
-                viewModel.load()
+            .refreshable {
+                if viewModel.state.data?.isEmpty == false {
+                    viewModel.load()
+                }
             }
+            .background(.background)
         }
-        .background(.background)
     }
 
     private struct TypeView: View {

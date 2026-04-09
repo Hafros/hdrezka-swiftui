@@ -9,6 +9,7 @@ import Alamofire
 import Combine
 import Defaults
 import FactoryKit
+import Perception
 import Pow
 import SwiftSoup
 import SwiftUI
@@ -35,26 +36,14 @@ struct ContentView: View {
     @State private var subscriptions: Set<AnyCancellable> = []
 
     var body: some View {
-        @Bindable var appState = appState
+        WithPerceptionTracking {
+            @Perception.Bindable var appState = appState
 
-        TabView(selection: Binding<Tabs>(
-            get: { appState.selectedTab },
-            set: { newValue in appState.selectedTab = newValue },
-        )) {
-            ForEach(Tabs.allCases.filter { !$0.needAccount && $0.showsInTabBar }) { tab in
-                tab
-                    .tabItem {
-                        Label {
-                            Text(tab.label)
-                        } icon: {
-                            Image(systemName: tab.image)
-                        }
-                    }
-                    .tag(tab)
-            }
-
-            if isLoggedIn {
-                ForEach(Tabs.allCases.filter { $0.needAccount && $0.showsInTabBar }) { tab in
+            TabView(selection: Binding<Tabs>(
+                get: { appState.selectedTab },
+                set: { newValue in appState.selectedTab = newValue },
+            )) {
+                ForEach(Tabs.allCases.filter { !$0.needAccount && $0.showsInTabBar }) { tab in
                     tab
                         .tabItem {
                             Label {
@@ -65,73 +54,87 @@ struct ContentView: View {
                         }
                         .tag(tab)
                 }
-            }
-        }
-        .onAppear {
-            if !appState.selectedTab.showsInTabBar {
-                appState.selectedTab = .home
-            }
 
-            getVersionUseCase()
-                .receive(on: DispatchQueue.main)
-                .sink { _ in } receiveValue: { version in
-                    lastHdrezkaAppVersion = version
+                if isLoggedIn {
+                    ForEach(Tabs.allCases.filter { $0.needAccount && $0.showsInTabBar }) { tab in
+                        tab
+                            .tabItem {
+                                Label {
+                                    Text(tab.label)
+                                } icon: {
+                                    Image(systemName: tab.image)
+                                }
+                            }
+                            .tag(tab)
+                    }
                 }
-                .store(in: &subscriptions)
-        }
-        .sheet(isPresented: $appState.isSignInPresented) {
-            SignInSheetView()
-                .presentationSizing(.fitted)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-        }
-        .fullScreenCover(item: $appState.presentedDetailsMovie) { movie in
-            DetailsView(movie: movie)
-        }
-        .onChange(of: isLoggedIn) {
-            if !isLoggedIn, appState.selectedTab.needAccount {
-                appState.selectedTab = .home
             }
-        }
-        .confirmationDialog("key.sign_out.label", isPresented: $appState.isSignOutPresented) {
-            Button(role: .destructive) {
-                logoutUseCase()
-                    .receive(on: DispatchQueue.main)
-                    .sink { completion in
-                        guard case let .failure(error) = completion else { return }
+            .onAppear {
+                if !appState.selectedTab.showsInTabBar {
+                    appState.selectedTab = .home
+                }
 
-                        self.error = error
-                        isErrorPresented = true
-                    } receiveValue: { success in
-                        isErrorPresented = !success
+                getVersionUseCase()
+                    .receive(on: DispatchQueue.main)
+                    .sink { _ in } receiveValue: { version in
+                        lastHdrezkaAppVersion = version
                     }
                     .store(in: &subscriptions)
-            } label: {
-                Text("key.yes")
             }
-        } message: {
-            Text("key.sign_out.q")
-        }
-        .alert("key.ops", isPresented: $isErrorPresented) {
-            Button(role: .cancel) {} label: {
-                Text("key.ok")
+            .sheet(isPresented: $appState.isSignInPresented) {
+                SignInSheetView()
+                    .presentationSizing(.fitted)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
             }
-        } message: {
-            if let error {
-                Text(error.localizedDescription)
+            .fullScreenCover(item: $appState.presentedDetailsMovie) { movie in
+                DetailsView(movie: movie)
             }
-        }
-        .confirmationDialog("key.premium_content", isPresented: $appState.isPremiumPresented) {
-            Link("key.buy", destination: (!_mirror.isDefaultValue ? mirror : Const.redirectMirror).appending(path: "payments", directoryHint: .notDirectory))
-        } message: {
-            Text("key.premium.description")
-        }
-        .alert("key.disclaimer", isPresented: $isFirstLaunch) {
-            Button(role: .cancel) {} label: {
-                Text("key.ok")
+            .onChange(of: isLoggedIn) {
+                if !isLoggedIn, appState.selectedTab.needAccount {
+                    appState.selectedTab = .home
+                }
             }
-        } message: {
-            Text("key.disclaimer.description")
+            .confirmationDialog("key.sign_out.label", isPresented: $appState.isSignOutPresented) {
+                Button(role: .destructive) {
+                    logoutUseCase()
+                        .receive(on: DispatchQueue.main)
+                        .sink { completion in
+                            guard case let .failure(error) = completion else { return }
+
+                            self.error = error
+                            isErrorPresented = true
+                        } receiveValue: { success in
+                            isErrorPresented = !success
+                        }
+                        .store(in: &subscriptions)
+                } label: {
+                    Text("key.yes")
+                }
+            } message: {
+                Text("key.sign_out.q")
+            }
+            .alert("key.ops", isPresented: $isErrorPresented) {
+                Button(role: .cancel) {} label: {
+                    Text("key.ok")
+                }
+            } message: {
+                if let error {
+                    Text(error.localizedDescription)
+                }
+            }
+            .confirmationDialog("key.premium_content", isPresented: $appState.isPremiumPresented) {
+                Link("key.buy", destination: (!_mirror.isDefaultValue ? mirror : Const.redirectMirror).appending(path: "payments", directoryHint: .notDirectory))
+            } message: {
+                Text("key.premium.description")
+            }
+            .alert("key.disclaimer", isPresented: $isFirstLaunch) {
+                Button(role: .cancel) {} label: {
+                    Text("key.ok")
+                }
+            } message: {
+                Text("key.disclaimer.description")
+            }
         }
     }
 }

@@ -17,9 +17,15 @@ struct ImageView: View {
                 ProgressView()
             }
             .resizable()
-            .loadTransition(.blurReplace, animation: .easeInOut)
             .cancelOnDisappear(true)
             .retry(NetworkRetryStrategy())
+            .viewModifier { view in
+                if #available(iOS 17, *) {
+                    view.loadTransition(.blurReplace, animation: .easeInOut)
+                } else {
+                    view
+                }
+            }
             .scaledToFit()
             .zoomable(
                 maxZoomScale: 5,
@@ -34,9 +40,15 @@ struct ImageView: View {
                         Color.gray
                     }
                     .resizable()
-                    .loadTransition(.opacity, animation: .easeInOut)
                     .cancelOnDisappear(true)
                     .retry(NetworkRetryStrategy())
+                    .viewModifier { view in
+                        if #available(iOS 17, *) {
+                            view.loadTransition(.opacity, animation: .easeInOut)
+                        } else {
+                            view
+                        }
+                    }
                     .scaledToFill()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
 

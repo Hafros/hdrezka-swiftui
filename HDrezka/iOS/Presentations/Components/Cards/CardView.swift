@@ -22,9 +22,15 @@ struct CardView: View {
                             Color.gray.shimmering()
                         }
                         .resizable()
-                        .loadTransition(.blurReplace, animation: .easeInOut)
                         .cancelOnDisappear(true)
                         .retry(NetworkRetryStrategy())
+                        .viewModifier { view in
+                            if #available(iOS 17, *) {
+                                view.loadTransition(.blurReplace, animation: .easeInOut)
+                            } else {
+                                view
+                            }
+                        }
                         .imageFill(2 / 3)
                         .clipShape(.rect(cornerRadius: 6))
                         .overlay(alignment: .topTrailing) {

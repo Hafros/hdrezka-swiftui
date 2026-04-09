@@ -2,7 +2,6 @@ import Combine
 import Defaults
 import FactoryKit
 import FirebaseAnalytics
-import SwiftData
 import SwiftUI
 
 struct WatchSheetView: View {
@@ -13,18 +12,16 @@ struct WatchSheetView: View {
     @State private var subscriptions: Set<AnyCancellable> = []
 
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
 
     @Environment(AppState.self) private var appState
 
-    @Query private var selectPositions: [SelectPosition]
+    @State private var selectPositions: [SelectPositionSnapshot] = []
 
     @Default(.isUserPremium) private var isUserPremium
     @Default(.isLoggedIn) private var isLoggedIn
     @Default(.defaultQuality) private var defaultQuality
 
     private let id: String
-    @Binding private var playerData: PlayerData?
 
     @State private var details: MovieDetailed?
     @State private var seasons: [MovieSeason]?
@@ -41,331 +38,19 @@ struct WatchSheetView: View {
 
     @State private var showRating: Bool = false
 
-    init(id: String, playerData: Binding<PlayerData?>) {
+    init(id: String) {
         self.id = id
-        _playerData = playerData
     }
 
     var body: some View {
         VStack(alignment: .center, spacing: 25) {
-            VStack(alignment: .center, spacing: 5) {
-                Image(systemName: "videoprojector")
-                    .font(.largeTitle)
-                    .foregroundStyle(Color.accentColor)
-
-                Text("key.before_starting")
-                    .font(.largeTitle.weight(.semibold))
-
-                Text("key.watch.description")
-                    .font(.title3)
-                    .lineLimit(2, reservesSpace: true)
-                    .multilineTextAlignment(.center)
-            }
-
+            headerSection
             if let details {
-                VStack(spacing: 18) {
-                    if details.series != nil || !(details.voiceActing ?? []).filter({ !$0.name.isEmpty }).isEmpty {
-                        VStack(spacing: 2.5) {
-                            if let acting = details.voiceActing, !acting.filter({ !$0.name.isEmpty }).isEmpty {
-                                HStack {
-                                    Text("key.acting")
-
-                                    if let rating = details.voiceActingRating?.sorted(by: { $0.percent > $1.percent }), !rating.isEmpty {
-                                        Button {
-                                            showRating = true
-                                        } label: {
-                                            Image(systemName: "questionmark.circle")
-                                                .foregroundStyle(Color.accentColor)
-                                                .font(.subheadline)
-                                        }
-                                        .buttonStyle(.plain)
-                                        .popover(isPresented: $showRating, arrowEdge: .trailing) {
-                                            ScrollView(.vertical) {
-                                                LazyVStack(alignment: .leading, spacing: 5) {
-                                                    ForEach(rating) { rate in
-                                                        ProgressView(value: rate.percent / 100.0) {
-                                                            Text(rate.name)
-                                                        } currentValueLabel: {
-                                                            Text(verbatim: "\(rate.percent)%")
-                                                        }
-                                                    }
-                                                }
-                                                .padding(15)
-                                                .progressViewStyle(.linear)
-                                            }
-                                            .scrollIndicators(.never)
-                                            .frame(width: 300)
-                                            .frame(maxHeight: 300)
-                                        }
-                                    }
-
-                                    Spacer()
-
-                                    Menu {
-                                        if acting.filter({ $0 != selectedActing }).contains(where: \.isPremium) {
-                                            Section {
-                                                ForEach(acting.filter(\.isPremium).filter { $0 != selectedActing }) { acting in
-                                                    Button {
-                                                        if isUserPremium != nil {
-                                                            withAnimation(.easeInOut) {
-                                                                selectedActing = acting
-                                                            }
-                                                        } else {
-                                                            dismiss()
-
-                                                            appState.isPremiumPresented = true
-                                                        }
-                                                    } label: {
-                                                        Label {
-                                                            Text(acting.name)
-                                                        } icon: {
-                                                            Image(.premium)
-                                                        }
-                                                    }
-                                                }
-                                            } header: {
-                                                Text("key.premium")
-                                            }
-
-                                            Divider()
-                                        }
-
-                                        ForEach(acting.filter {
-                                            !$0.isPremium
-                                        }.filter { $0 != selectedActing }) { acting in
-                                            Button {
-                                                withAnimation(.easeInOut) {
-                                                    selectedActing = acting
-                                                }
-                                            } label: {
-                                                Text(acting.name)
-                                            }
-                                        }
-                                    } label: {
-                                        let name = if let selectedActing {
-                                            if selectedActing.name.isEmpty {
-                                                String(localized: "key.default")
-                                            } else {
-                                                selectedActing.name
-                                            }
-                                        } else {
-                                            String(localized: "key.acting.select")
-                                        }
-
-                                        Label(name, systemImage: "chevron.up.chevron.down")
-                                    }
-                                    .menuStyle(.button)
-                                    .menuIndicator(.hidden)
-                                    .buttonStyle(.plain)
-                                    .labelStyle(CustomLabelStyle(iconVisible: acting.count > 1))
-                                    .disabled(acting.isEmpty != false)
-                                }
-                                .padding(.vertical, 10)
-                                .overlay {
-                                    if acting.isEmpty != false {
-                                        ProgressView().scaleEffect(0.6)
-                                    }
-                                }
-                            }
-
-                            if details.series != nil, selectedActing != nil {
-                                if !(details.voiceActing ?? []).filter({ !$0.name.isEmpty }).isEmpty {
-                                    Divider()
-                                }
-
-                                HStack {
-                                    Text("key.season")
-
-                                    Spacer()
-
-                                    Menu {
-                                        ForEach((seasons ?? []).filter { $0 != selectedSeason }) { season in
-                                            Button {
-                                                withAnimation(.easeInOut) {
-                                                    selectedSeason = season
-                                                }
-                                            } label: {
-                                                Text(season.name.contains(/^\d/) ? String(localized: "key.season-\(season.name)") : season.name)
-                                            }
-                                        }
-                                    } label: {
-                                        let name = if let selectedSeason {
-                                            if selectedSeason.name.isEmpty {
-                                                String(localized: "key.season-\(1)")
-                                            } else if selectedSeason.name.contains(/^\d/) {
-                                                String(localized: "key.season-\(selectedSeason.name)")
-                                            } else {
-                                                selectedSeason.name
-                                            }
-                                        } else {
-                                            String(localized: "key.season.select")
-                                        }
-
-                                        Label(name, systemImage: "chevron.up.chevron.down")
-                                    }
-                                    .menuStyle(.button)
-                                    .menuIndicator(.hidden)
-                                    .buttonStyle(.plain)
-                                    .labelStyle(CustomLabelStyle(iconVisible: (seasons?.count ?? 0) > 1))
-                                    .disabled(seasons?.isEmpty != false)
-                                }
-                                .padding(.vertical, 10)
-                                .overlay {
-                                    if seasons?.isEmpty != false {
-                                        ProgressView().scaleEffect(0.6)
-                                    }
-                                }
-
-                                Divider()
-
-                                HStack {
-                                    Text("key.episode")
-
-                                    Spacer()
-
-                                    Menu {
-                                        ForEach((selectedSeason?.episodes ?? []).filter { $0 != selectedEpisode }) { episode in
-                                            Button {
-                                                withAnimation(.easeInOut) {
-                                                    selectedEpisode = episode
-                                                }
-                                            } label: {
-                                                Text(episode.name.contains(/^\d/) ? String(localized: "key.episode-\(episode.name)") : episode.name)
-                                            }
-                                        }
-                                    } label: {
-                                        let name = if let selectedEpisode {
-                                            if selectedEpisode.name.isEmpty {
-                                                String(localized: "key.episode-\(1)")
-                                            } else if selectedEpisode.name.contains(/^\d/) {
-                                                String(localized: "key.episode-\(selectedEpisode.name)")
-                                            } else {
-                                                selectedEpisode.name
-                                            }
-                                        } else {
-                                            String(localized: "key.episode.select")
-                                        }
-
-                                        Label(name, systemImage: "chevron.up.chevron.down")
-                                    }
-                                    .menuStyle(.button)
-                                    .menuIndicator(.hidden)
-                                    .buttonStyle(.plain)
-                                    .labelStyle(CustomLabelStyle(iconVisible: (selectedSeason?.episodes.count ?? 0) > 1))
-                                    .disabled(selectedSeason?.episodes.isEmpty != false)
-                                }
-                                .padding(.vertical, 10)
-                                .overlay {
-                                    if selectedSeason?.episodes.isEmpty != false {
-                                        ProgressView().scaleEffect(0.6)
-                                    }
-                                }
-                            }
-                        }
-                        .padding(.horizontal, 15)
-                        .padding(.vertical, 5)
-                        .background(.quinary, in: .rect(cornerRadius: 6))
-                        .overlay(.tertiary, in: .rect(cornerRadius: 6).stroke(lineWidth: 1))
-                    }
-
-                    if (details.series == nil && selectedActing != nil) || selectedEpisode != nil {
-                        HStack {
-                            Text("key.quality")
-
-                            if let selectedQuality, let movie, let link = movie.getClosestTo(quality: selectedQuality) {
-                                ShareLink(item: link) {
-                                    Image(systemName: "square.and.arrow.up")
-                                        .foregroundStyle(.secondary)
-                                        .font(.subheadline)
-                                }
-                                .buttonStyle(.plain)
-                            }
-
-                            Spacer()
-
-                            Menu {
-                                if !(movie?.getLockedQualities() ?? []).isEmpty {
-                                    Section {
-                                        ForEach(movie?.getLockedQualities() ?? [], id: \.self) { quality in
-                                            Button {
-                                                if isLoggedIn {
-                                                    withAnimation(.easeInOut) {
-                                                        selectedQuality = quality
-                                                    }
-                                                } else {
-                                                    isLoginPresented = true
-                                                }
-                                            } label: {
-                                                Text(quality)
-                                            }
-                                        }
-                                    } header: {
-                                        Text("key.sign_in.access")
-                                    }
-
-                                    Divider()
-                                }
-
-                                ForEach((movie?.getAvailableQualities() ?? []).filter { $0 != selectedQuality }, id: \.self) { quality in
-                                    Button {
-                                        withAnimation(.easeInOut) {
-                                            selectedQuality = quality
-                                        }
-                                    } label: {
-                                        Text(quality)
-                                    }
-                                }
-                            } label: {
-                                let name = if let selectedQuality {
-                                    if selectedQuality.isEmpty {
-                                        String(localized: "key.default")
-                                    } else {
-                                        selectedQuality
-                                    }
-                                } else {
-                                    String(localized: "key.quality.select")
-                                }
-
-                                Label(name, systemImage: "chevron.up.chevron.down")
-                            }
-                            .menuStyle(.button)
-                            .menuIndicator(.hidden)
-                            .buttonStyle(.plain)
-                            .labelStyle(CustomLabelStyle(iconVisible: ((movie?.getAvailableQualities().count ?? 0) + (movie?.getLockedQualities().count ?? 0)) > 1))
-                            .disabled(movie?.getAvailableQualities().isEmpty != false)
-                        }
-                        .padding(.horizontal, 15)
-                        .padding(.vertical, 15)
-                        .background(.quinary, in: .rect(cornerRadius: 6))
-                        .overlay(.tertiary, in: .rect(cornerRadius: 6).stroke(lineWidth: 1))
-                        .overlay {
-                            if movie?.getAvailableQualities().isEmpty != false {
-                                ProgressView().scaleEffect(0.6)
-                            }
-                        }
-                    }
-                }
+                detailsSection(details: details)
             } else {
                 ProgressView()
             }
-
-            VStack(alignment: .center, spacing: 10) {
-                Button {
-                    if let details, let selectedActing, let selectedQuality, let movie {
-                        dismiss()
-
-                        playerData = PlayerData(details: details, selectedActing: selectedActing, seasons: seasons, selectedSeason: selectedSeason, selectedEpisode: selectedEpisode, selectedQuality: selectedQuality, movie: movie)
-                    }
-                } label: {
-                    Text("key.watch")
-                        .frame(width: 250, height: 30)
-                        .foregroundStyle(.white)
-                        .contentShape(.rect(cornerRadius: 6))
-                        .background(selectedQuality != nil ? Color.accentColor : Color.secondary, in: .rect(cornerRadius: 6))
-                }
-                .buttonStyle(.plain)
-                .disabled(selectedQuality == nil)
-            }
+            watchButtonSection
         }
         .alert("key.ops", isPresented: $isErrorPresented) {
             if let hdrezkaError = error as? HDrezkaError, case .loginRequired = hdrezkaError {
@@ -405,6 +90,8 @@ struct WatchSheetView: View {
         .fixedSize(horizontal: false, vertical: true)
         .frame(width: 520)
         .onAppear {
+            loadSelectPositions()
+
             getMovieDetailsUseCase(movieId: id)
                 .receive(on: DispatchQueue.main)
                 .sink { completion in
@@ -419,7 +106,7 @@ struct WatchSheetView: View {
                 }
                 .store(in: &subscriptions)
         }
-        .onChange(of: details) {
+        .onChange(of: details) { _ in
             if let details, let acting = details.voiceActing {
                 withAnimation(.easeInOut) {
                     selectedActing = if !isLoggedIn,
@@ -443,7 +130,7 @@ struct WatchSheetView: View {
                 }
             }
         }
-        .onChange(of: selectedActing) {
+        .onChange(of: selectedActing) { _ in
             withAnimation(.easeInOut) {
                 selectedSeason = nil
                 selectedEpisode = nil
@@ -524,7 +211,7 @@ struct WatchSheetView: View {
                 }
             }
         }
-        .onChange(of: selectedSeason) {
+        .onChange(of: selectedSeason) { _ in
             withAnimation(.easeInOut) {
                 selectedQuality = nil
                 movie = nil
@@ -547,7 +234,7 @@ struct WatchSheetView: View {
                 }
             }
         }
-        .onChange(of: selectedEpisode) {
+        .onChange(of: selectedEpisode) { _ in
             withAnimation(.easeInOut) {
                 selectedQuality = nil
                 movie = nil
@@ -587,6 +274,334 @@ struct WatchSheetView: View {
             }
         }
         .analyticsScreen(name: "watch_sheet", class: "WatchSheetView")
+    }
+
+    private var headerSection: some View {
+        VStack(alignment: .center, spacing: 5) {
+            Image(systemName: "videoprojector")
+                .font(.largeTitle)
+                .foregroundStyle(Color.accentColor)
+
+            Text("key.before_starting")
+                .font(.largeTitle.weight(.semibold))
+
+            Text("key.watch.description")
+                .font(.title3)
+                .lineLimit(2, reservesSpace: true)
+                .multilineTextAlignment(.center)
+        }
+    }
+
+    private func detailsSection(details: MovieDetailed) -> some View {
+        VStack(spacing: 18) {
+            if details.series != nil || !(details.voiceActing ?? []).filter({ !$0.name.isEmpty }).isEmpty {
+                VStack(spacing: 2.5) {
+                    if let acting = details.voiceActing, !acting.filter({ !$0.name.isEmpty }).isEmpty {
+                        HStack {
+                            Text("key.acting")
+
+                            if let rating = details.voiceActingRating?.sorted(by: { $0.percent > $1.percent }), !rating.isEmpty {
+                                Button {
+                                    showRating = true
+                                } label: {
+                                    Image(systemName: "questionmark.circle")
+                                        .foregroundStyle(Color.accentColor)
+                                        .font(.subheadline)
+                                }
+                                .buttonStyle(.plain)
+                                .popover(isPresented: $showRating, arrowEdge: .trailing) {
+                                    ScrollView(.vertical) {
+                                        LazyVStack(alignment: .leading, spacing: 5) {
+                                            ForEach(rating) { rate in
+                                                ProgressView(value: rate.percent / 100.0) {
+                                                    Text(rate.name)
+                                                } currentValueLabel: {
+                                                    Text(verbatim: "\(rate.percent)%")
+                                                }
+                                            }
+                                        }
+                                        .padding(15)
+                                        .progressViewStyle(.linear)
+                                    }
+                                    .scrollIndicators(.never)
+                                    .frame(width: 300)
+                                    .frame(maxHeight: 300)
+                                }
+                            }
+
+                            Spacer()
+
+                            Menu {
+                                if acting.filter({ $0 != selectedActing }).contains(where: \.isPremium) {
+                                    Section {
+                                        ForEach(acting.filter(\.isPremium).filter { $0 != selectedActing }) { acting in
+                                            Button {
+                                                if isUserPremium != nil {
+                                                    withAnimation(.easeInOut) {
+                                                        selectedActing = acting
+                                                    }
+                                                } else {
+                                                    dismiss()
+
+                                                    appState.isPremiumPresented = true
+                                                }
+                                            } label: {
+                                                Label {
+                                                    Text(acting.name)
+                                                } icon: {
+                                                    Image(.premium)
+                                                }
+                                            }
+                                        }
+                                    } header: {
+                                        Text("key.premium")
+                                    }
+
+                                    Divider()
+                                }
+
+                                ForEach(acting.filter {
+                                    !$0.isPremium
+                                }.filter { $0 != selectedActing }) { acting in
+                                    Button {
+                                        withAnimation(.easeInOut) {
+                                            selectedActing = acting
+                                        }
+                                    } label: {
+                                        Text(acting.name)
+                                    }
+                                }
+                            } label: {
+                                let name = if let selectedActing {
+                                    if selectedActing.name.isEmpty {
+                                        String(localized: "key.default")
+                                    } else {
+                                        selectedActing.name
+                                    }
+                                } else {
+                                    String(localized: "key.acting.select")
+                                }
+
+                                Label(name, systemImage: "chevron.up.chevron.down")
+                            }
+                            .menuStyle(.button)
+                            .menuIndicator(.hidden)
+                            .buttonStyle(.plain)
+                            .labelStyle(CustomLabelStyle(iconVisible: acting.count > 1))
+                            .disabled(acting.isEmpty != false)
+                        }
+                        .padding(.vertical, 10)
+                        .overlay {
+                            if acting.isEmpty != false {
+                                ProgressView().scaleEffect(0.6)
+                            }
+                        }
+                    }
+
+                    if details.series != nil, selectedActing != nil {
+                        if !(details.voiceActing ?? []).filter({ !$0.name.isEmpty }).isEmpty {
+                            Divider()
+                        }
+
+                        HStack {
+                            Text("key.season")
+
+                            Spacer()
+
+                            Menu {
+                                ForEach((seasons ?? []).filter { $0 != selectedSeason }) { season in
+                                    Button {
+                                        withAnimation(.easeInOut) {
+                                            selectedSeason = season
+                                        }
+                                    } label: {
+                                        Text(season.name.contains(/^\d/) ? String(localized: "key.season-\(season.name)") : season.name)
+                                    }
+                                }
+                            } label: {
+                                let name = if let selectedSeason {
+                                    if selectedSeason.name.isEmpty {
+                                        String(localized: "key.season-\(1)")
+                                    } else if selectedSeason.name.contains(/^\d/) {
+                                        String(localized: "key.season-\(selectedSeason.name)")
+                                    } else {
+                                        selectedSeason.name
+                                    }
+                                } else {
+                                    String(localized: "key.season.select")
+                                }
+
+                                Label(name, systemImage: "chevron.up.chevron.down")
+                            }
+                            .menuStyle(.button)
+                            .menuIndicator(.hidden)
+                            .buttonStyle(.plain)
+                            .labelStyle(CustomLabelStyle(iconVisible: (seasons?.count ?? 0) > 1))
+                            .disabled(seasons?.isEmpty != false)
+                        }
+                        .padding(.vertical, 10)
+                        .overlay {
+                            if seasons?.isEmpty != false {
+                                ProgressView().scaleEffect(0.6)
+                            }
+                        }
+
+                        Divider()
+
+                        HStack {
+                            Text("key.episode")
+
+                            Spacer()
+
+                            Menu {
+                                ForEach((selectedSeason?.episodes ?? []).filter { $0 != selectedEpisode }) { episode in
+                                    Button {
+                                        withAnimation(.easeInOut) {
+                                            selectedEpisode = episode
+                                        }
+                                    } label: {
+                                        Text(episode.name.contains(/^\d/) ? String(localized: "key.episode-\(episode.name)") : episode.name)
+                                    }
+                                }
+                            } label: {
+                                let name = if let selectedEpisode {
+                                    if selectedEpisode.name.isEmpty {
+                                        String(localized: "key.episode-\(1)")
+                                    } else if selectedEpisode.name.contains(/^\d/) {
+                                        String(localized: "key.episode-\(selectedEpisode.name)")
+                                    } else {
+                                        selectedEpisode.name
+                                    }
+                                } else {
+                                    String(localized: "key.episode.select")
+                                }
+
+                                Label(name, systemImage: "chevron.up.chevron.down")
+                            }
+                            .menuStyle(.button)
+                            .menuIndicator(.hidden)
+                            .buttonStyle(.plain)
+                            .labelStyle(CustomLabelStyle(iconVisible: (selectedSeason?.episodes.count ?? 0) > 1))
+                            .disabled(selectedSeason?.episodes.isEmpty != false)
+                        }
+                        .padding(.vertical, 10)
+                        .overlay {
+                            if selectedSeason?.episodes.isEmpty != false {
+                                ProgressView().scaleEffect(0.6)
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 15)
+                .padding(.vertical, 5)
+                .background(.quinary, in: .rect(cornerRadius: 6))
+                .overlay(.tertiary, in: .rect(cornerRadius: 6).stroke(lineWidth: 1))
+            }
+
+            if (details.series == nil && selectedActing != nil) || selectedEpisode != nil {
+                HStack {
+                    Text("key.quality")
+
+                    if let selectedQuality, let movie, let link = movie.getClosestTo(quality: selectedQuality) {
+                        ShareLink(item: link) {
+                            Image(systemName: "square.and.arrow.up")
+                                .foregroundStyle(.secondary)
+                                .font(.subheadline)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Spacer()
+
+                    Menu {
+                        if !(movie?.getLockedQualities() ?? []).isEmpty {
+                            Section {
+                                ForEach(movie?.getLockedQualities() ?? [], id: \.self) { quality in
+                                    Button {
+                                        if isLoggedIn {
+                                            withAnimation(.easeInOut) {
+                                                selectedQuality = quality
+                                            }
+                                        } else {
+                                            isLoginPresented = true
+                                        }
+                                    } label: {
+                                        Text(quality)
+                                    }
+                                }
+                            } header: {
+                                Text("key.sign_in.access")
+                            }
+
+                            Divider()
+                        }
+
+                        ForEach((movie?.getAvailableQualities() ?? []).filter { $0 != selectedQuality }, id: \.self) { quality in
+                            Button {
+                                withAnimation(.easeInOut) {
+                                    selectedQuality = quality
+                                }
+                            } label: {
+                                Text(quality)
+                            }
+                        }
+                    } label: {
+                        let name = if let selectedQuality {
+                            if selectedQuality.isEmpty {
+                                String(localized: "key.default")
+                            } else {
+                                selectedQuality
+                            }
+                        } else {
+                            String(localized: "key.quality.select")
+                        }
+
+                        Label(name, systemImage: "chevron.up.chevron.down")
+                    }
+                    .menuStyle(.button)
+                    .menuIndicator(.hidden)
+                    .buttonStyle(.plain)
+                    .labelStyle(CustomLabelStyle(iconVisible: ((movie?.getAvailableQualities().count ?? 0) + (movie?.getLockedQualities().count ?? 0)) > 1))
+                    .disabled(movie?.getAvailableQualities().isEmpty != false)
+                }
+                .padding(.horizontal, 15)
+                .padding(.vertical, 15)
+                .background(.quinary, in: .rect(cornerRadius: 6))
+                .overlay(.tertiary, in: .rect(cornerRadius: 6).stroke(lineWidth: 1))
+                .overlay {
+                    if movie?.getAvailableQualities().isEmpty != false {
+                        ProgressView().scaleEffect(0.6)
+                    }
+                }
+            }
+        }
+    }
+
+    private var watchButtonSection: some View {
+        VStack(alignment: .center, spacing: 10) {
+            Button {
+                if let details, let selectedActing, let selectedQuality, let movie {
+                    let data = PlayerData(details: details, selectedActing: selectedActing, seasons: seasons, selectedSeason: selectedSeason, selectedEpisode: selectedEpisode, selectedQuality: selectedQuality, movie: movie)
+                    dismiss()
+
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        PlayerPresenter.present(data: data)
+                    }
+                }
+            } label: {
+                Text("key.watch")
+                    .frame(width: 250, height: 30)
+                    .foregroundStyle(.white)
+                    .contentShape(.rect(cornerRadius: 6))
+                    .background(selectedQuality != nil ? Color.accentColor : Color.secondary, in: .rect(cornerRadius: 6))
+            }
+            .buttonStyle(.plain)
+            .disabled(selectedQuality == nil)
+        }
+    }
+
+    private func loadSelectPositions() {
+        selectPositions = PositionsStore.fetchSelectPositions()
     }
 
     private struct CustomLabelStyle: LabelStyle {

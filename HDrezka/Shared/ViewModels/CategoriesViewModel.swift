@@ -1,14 +1,15 @@
 import Combine
 import FactoryKit
+import Perception
 import SwiftUI
 
-@Observable
+@Perceptible
 class CategoriesViewModel {
-    @ObservationIgnored @LazyInjected(\.categoriesUseCase) private var categoriesUseCase
+    @PerceptionIgnored @LazyInjected(\.categoriesUseCase) private var categoriesUseCase
 
     private(set) var state: DataState<[MovieType]> = .loading
 
-    @ObservationIgnored private var subscriptions: Set<AnyCancellable> = []
+    @PerceptionIgnored private var subscriptions: Set<AnyCancellable> = []
 
     func load() {
         state = .loading

@@ -1,17 +1,18 @@
 import Combine
 import FactoryKit
+import Perception
 import SwiftUI
 
-@Observable
+@Perceptible
 class CollectionsViewModel {
-    @ObservationIgnored @LazyInjected(\.getCollectionsUseCase) private var getCollectionsUseCase
+    @PerceptionIgnored @LazyInjected(\.getCollectionsUseCase) private var getCollectionsUseCase
 
-    @ObservationIgnored private var subscriptions: Set<AnyCancellable> = []
+    @PerceptionIgnored private var subscriptions: Set<AnyCancellable> = []
 
     private(set) var state: DataState<[MoviesCollection]> = .loading
     private(set) var paginationState: DataPaginationState = .idle
 
-    @ObservationIgnored private var page = 1
+    @PerceptionIgnored private var page = 1
 
     private func getData(isInitial: Bool = true) {
         getCollectionsUseCase(page: page)

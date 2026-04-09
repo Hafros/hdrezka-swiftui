@@ -52,28 +52,6 @@ struct SliderWithText<T: BinaryFloatingPoint>: View {
                             .mask(alignment: .leading) {
                                 Color.black.frame(width: max(geometry.size.width * CGFloat(localRealProgress + localTempProgress), 0))
                             }
-
-                        ForEach(buffers, id: \.self) { buffer in
-                            if let start = buffer.start.seconds as? T, let end = buffer.end.seconds as? T {
-                                emptyColor
-                                    .mask(alignment: .leading) {
-                                        let duration = if isActive {
-                                            max(Double(end / inRange.upperBound) - Double(start / inRange.upperBound), 0)
-                                        } else {
-                                            max(Double(end / inRange.upperBound) - Double(localRealProgress + localTempProgress), 0)
-                                        }
-
-                                        let point = CGPoint(
-                                            x: isActive ? max(geometry.size.width * (Double(start / inRange.upperBound) + duration * 0.5), 0) : max(geometry.size.width * (Double(localRealProgress + localTempProgress) + duration * 0.5), 0),
-                                            y: (isActive ? height * 1.25 : height) * 0.5,
-                                        )
-
-                                        Color.black
-                                            .frame(width: max(geometry.size.width * duration, 0))
-                                            .position(x: point.x, y: point.y)
-                                    }
-                            }
-                        }
                     }
                     .frame(height: isActive ? height * 1.25 : height, alignment: .center)
                     .animation(.easeInOut, value: isActive)
@@ -108,9 +86,15 @@ struct SliderWithText<T: BinaryFloatingPoint>: View {
                                 }
                                 .resizable()
                                 .cropping(rect: frame)
-                                .loadTransition(.blurReplace, animation: .easeInOut)
                                 .cancelOnDisappear(true)
                                 .retry(NetworkRetryStrategy())
+                                .viewModifier { view in
+                                    if #available(iOS 17, *) {
+                                        view.loadTransition(.blurReplace, animation: .easeInOut)
+                                    } else {
+                                        view
+                                    }
+                                }
                                 .scaledToFill()
                                 .frame(width: frame.width, height: frame.height)
                                 .clipShape(.rect(cornerRadius: 6))
@@ -137,7 +121,7 @@ struct SliderWithText<T: BinaryFloatingPoint>: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .onChange(of: isActive) {
+        .onChange(of: isActive) { _ in
             value = max(min(getPrgValue(), inRange.upperBound), inRange.lowerBound)
             onEditingChanged(isActive)
         }
@@ -145,7 +129,7 @@ struct SliderWithText<T: BinaryFloatingPoint>: View {
             localRealProgress = getPrgPercentage(value)
             progressDuration = inRange.upperBound * localRealProgress
         }
-        .onChange(of: value) {
+        .onChange(of: value) { _ in
             if !isActive {
                 localRealProgress = getPrgPercentage(value)
                 progressDuration = inRange.upperBound * localRealProgress

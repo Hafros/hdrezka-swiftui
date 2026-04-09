@@ -47,26 +47,51 @@ import SwiftUI
                         },
                     including: transform == .identity ? .none : .all,
                 )
-                .gesture(
-                    MagnifyGesture(minimumScaleDelta: 0)
-                        .onChanged { value in
-                            let rawTransform = lastTransform.concatenating(
-                                .anchoredScale(
-                                    scale: value.magnification,
-                                    anchor: value.startAnchor.scaledBy(contentSize),
-                                ),
-                            )
+                .viewModifier { view in
+                    if #available(iOS 17, macOS 14, *) {
+                        view.gesture(
+                            MagnifyGesture(minimumScaleDelta: 0)
+                                .onChanged { value in
+                                    let rawTransform = lastTransform.concatenating(
+                                        .anchoredScale(
+                                            scale: value.magnification,
+                                            anchor: value.startAnchor.scaledBy(contentSize),
+                                        ),
+                                    )
 
-                            let limitedTransform = limitTransform(rawTransform)
+                                    let limitedTransform = limitTransform(rawTransform)
 
-                            withAnimation(.interactiveSpring) {
-                                transform = limitedTransform
-                            }
-                        }
-                        .onEnded { _ in
-                            lastTransform = transform
-                        },
-                )
+                                    withAnimation(.interactiveSpring) {
+                                        transform = limitedTransform
+                                    }
+                                }
+                                .onEnded { _ in
+                                    lastTransform = transform
+                                },
+                        )
+                    } else {
+                        view.gesture(
+                            MagnificationGesture()
+                                .onChanged { value in
+                                    let rawTransform = lastTransform.concatenating(
+                                        .anchoredScale(
+                                            scale: value,
+                                            anchor: CGPoint(x: contentSize.width / 2, y: contentSize.height / 2),
+                                        ),
+                                    )
+
+                                    let limitedTransform = limitTransform(rawTransform)
+
+                                    withAnimation(.interactiveSpring) {
+                                        transform = limitedTransform
+                                    }
+                                }
+                                .onEnded { _ in
+                                    lastTransform = transform
+                                },
+                        )
+                    }
+                }
                 .viewModifier { view in
                     if let doubleTapZoomScale {
                         view.gesture(

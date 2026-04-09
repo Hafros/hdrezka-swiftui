@@ -1,6 +1,7 @@
 import Combine
 import FactoryKit
 import FirebaseAnalytics
+import Perception
 import SwiftUI
 
 struct RestoreSheetView: View {
@@ -25,158 +26,160 @@ struct RestoreSheetView: View {
     @FocusState private var focusedField: FocusedField?
 
     var body: some View {
-        Group {
-            switch state {
-            case .data:
-                VStack(alignment: .center, spacing: 25) {
-                    VStack(alignment: .center, spacing: 5) {
-                        Image(systemName: "person.crop.circle.badge.questionmark")
-                            .font(.largeTitle)
-                            .foregroundStyle(Color.accentColor)
+        WithPerceptionTracking {
+            Group {
+                switch state {
+                case .data:
+                    VStack(alignment: .center, spacing: 25) {
+                        VStack(alignment: .center, spacing: 5) {
+                            Image(systemName: "person.crop.circle.badge.questionmark")
+                                .font(.largeTitle)
+                                .foregroundStyle(Color.accentColor)
 
-                        Text("key.restore.label")
-                            .font(.largeTitle.weight(.semibold))
+                            Text("key.restore.label")
+                                .font(.largeTitle.weight(.semibold))
 
-                        Text("key.password.lost")
-                            .font(.title3)
-                            .lineLimit(2, reservesSpace: true)
-                            .multilineTextAlignment(.center)
-                    }
+                            Text("key.password.lost")
+                                .font(.title3)
+                                .lineLimit(2, reservesSpace: true)
+                                .multilineTextAlignment(.center)
+                        }
 
-                    VStack(alignment: .center, spacing: 8) {
-                        VStack(spacing: 2.5) {
-                            HStack(alignment: .center, spacing: 8) {
-                                Text("key.username.full")
+                        VStack(alignment: .center, spacing: 8) {
+                            VStack(spacing: 2.5) {
+                                HStack(alignment: .center, spacing: 8) {
+                                    Text("key.username.full")
 
-                                TextField("key.username.full", text: $login, prompt: Text(String(localized: "key.username.full").lowercased()))
-                                    .textFieldStyle(.plain)
-                                    .multilineTextAlignment(.trailing)
-                                    .focused($focusedField, equals: .login)
-                                    .onChange(of: login) {
-                                        let newValue = String(login.unicodeScalars.filter { CharacterSet.whitespacesAndNewlines.inverted.contains($0) })
-                                        if newValue != login {
-                                            login = newValue
+                                    TextField("key.username.full", text: $login, prompt: Text(String(localized: "key.username.full").lowercased()))
+                                        .textFieldStyle(.plain)
+                                        .multilineTextAlignment(.trailing)
+                                        .focused($focusedField, equals: .login)
+                                        .onChange(of: login) { _ in
+                                            let newValue = String(login.unicodeScalars.filter { CharacterSet.whitespacesAndNewlines.inverted.contains($0) })
+                                            if newValue != login {
+                                                login = newValue
+                                            }
                                         }
-                                    }
-                                    .onSubmit {
-                                        if !login.isEmpty {
-                                            load()
+                                        .onSubmit {
+                                            if !login.isEmpty {
+                                                load()
+                                            }
                                         }
-                                    }
+                                }
+                                .padding(.vertical, 10)
                             }
-                            .padding(.vertical, 10)
+                            .padding(.horizontal, 15)
+                            .padding(.vertical, 5)
+                            .background(.quinary, in: .rect(cornerRadius: 6))
+                            .overlay(.tertiary, in: .rect(cornerRadius: 6).stroke(lineWidth: 1))
                         }
-                        .padding(.horizontal, 15)
-                        .padding(.vertical, 5)
-                        .background(.quinary, in: .rect(cornerRadius: 6))
-                        .overlay(.tertiary, in: .rect(cornerRadius: 6).stroke(lineWidth: 1))
-                    }
 
-                    VStack(alignment: .center, spacing: 10) {
-                        Button {
-                            load()
-                        } label: {
-                            Text("key.restore")
-                                .frame(width: 250, height: 30)
-                                .foregroundStyle(.white)
-                                .contentShape(.rect(cornerRadius: 6))
-                                .background(!login.isEmpty ? Color.accentColor : Color.secondary, in: .rect(cornerRadius: 6))
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(login.isEmpty)
-                        .animation(.easeInOut, value: !login.isEmpty)
-                    }
-                }
-                .onAppear {
-                    focusedField = .login
-                }
-            case .loading:
-                VStack(alignment: .center, spacing: 25) {
-                    VStack(alignment: .center, spacing: 5) {
-                        Image(systemName: "person.crop.circle.badge.questionmark")
-                            .font(.largeTitle)
-                            .foregroundStyle(Color.accentColor)
-
-                        Text("key.restore.enter")
-                            .font(.largeTitle.weight(.semibold))
-
-                        Text("key.request.wait")
-                            .font(.title3)
-                            .lineLimit(1, reservesSpace: true)
-                            .multilineTextAlignment(.center)
-                    }
-
-                    Spacer()
-
-                    VStack(alignment: .center, spacing: 10) {
-                        Button {
-                            subscriptions.flush()
-
-                            withAnimation(.easeInOut) {
-                                state = .data
+                        VStack(alignment: .center, spacing: 10) {
+                            Button {
+                                load()
+                            } label: {
+                                Text("key.restore")
+                                    .frame(width: 250, height: 30)
+                                    .foregroundStyle(.white)
+                                    .contentShape(.rect(cornerRadius: 6))
+                                    .background(!login.isEmpty ? Color.accentColor : Color.secondary, in: .rect(cornerRadius: 6))
                             }
-                        } label: {
-                            Text("key.cancel")
-                                .frame(width: 250, height: 30)
-                                .contentShape(.rect(cornerRadius: 6))
-                                .background(.quinary.opacity(0.5), in: .rect(cornerRadius: 6))
+                            .buttonStyle(.plain)
+                            .disabled(login.isEmpty)
+                            .animation(.easeInOut, value: !login.isEmpty)
                         }
-                        .buttonStyle(.plain)
                     }
-                }
-            case .error:
-                VStack(alignment: .center, spacing: 25) {
-                    VStack(alignment: .center, spacing: 5) {
-                        Image(systemName: "person.crop.circle.badge.questionmark")
-                            .font(.largeTitle)
-                            .foregroundStyle(Color.accentColor)
-
-                        Text("key.ops")
-                            .font(.largeTitle.weight(.semibold))
-
-                        Text("key.username.email.error")
-                            .font(.title3)
-                            .lineLimit(1, reservesSpace: true)
-                            .multilineTextAlignment(.center)
+                    .onAppear {
+                        focusedField = .login
                     }
+                case .loading:
+                    VStack(alignment: .center, spacing: 25) {
+                        VStack(alignment: .center, spacing: 5) {
+                            Image(systemName: "person.crop.circle.badge.questionmark")
+                                .font(.largeTitle)
+                                .foregroundStyle(Color.accentColor)
 
-                    Spacer()
+                            Text("key.restore.enter")
+                                .font(.largeTitle.weight(.semibold))
 
-                    VStack(alignment: .center, spacing: 10) {
-                        Button {
-                            withAnimation(.easeInOut) {
-                                state = .data
+                            Text("key.request.wait")
+                                .font(.title3)
+                                .lineLimit(1, reservesSpace: true)
+                                .multilineTextAlignment(.center)
+                        }
+
+                        Spacer()
+
+                        VStack(alignment: .center, spacing: 10) {
+                            Button {
+                                subscriptions.flush()
+
+                                withAnimation(.easeInOut) {
+                                    state = .data
+                                }
+                            } label: {
+                                Text("key.cancel")
+                                    .frame(width: 250, height: 30)
+                                    .contentShape(.rect(cornerRadius: 6))
+                                    .background(.quinary.opacity(0.5), in: .rect(cornerRadius: 6))
                             }
-                        } label: {
-                            Text("key.retry")
-                                .frame(width: 250, height: 30)
-                                .foregroundStyle(.white)
-                                .contentShape(.rect(cornerRadius: 6))
-                                .background(Color.accentColor, in: .rect(cornerRadius: 6))
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
+                    }
+                case .error:
+                    VStack(alignment: .center, spacing: 25) {
+                        VStack(alignment: .center, spacing: 5) {
+                            Image(systemName: "person.crop.circle.badge.questionmark")
+                                .font(.largeTitle)
+                                .foregroundStyle(Color.accentColor)
+
+                            Text("key.ops")
+                                .font(.largeTitle.weight(.semibold))
+
+                            Text("key.username.email.error")
+                                .font(.title3)
+                                .lineLimit(1, reservesSpace: true)
+                                .multilineTextAlignment(.center)
+                        }
+
+                        Spacer()
+
+                        VStack(alignment: .center, spacing: 10) {
+                            Button {
+                                withAnimation(.easeInOut) {
+                                    state = .data
+                                }
+                            } label: {
+                                Text("key.retry")
+                                    .frame(width: 250, height: 30)
+                                    .foregroundStyle(.white)
+                                    .contentShape(.rect(cornerRadius: 6))
+                                    .background(Color.accentColor, in: .rect(cornerRadius: 6))
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                 }
             }
-        }
-        .padding(.horizontal, 35)
-        .padding(.top, 35)
-        .padding(.bottom, 25)
-        .fixedSize(horizontal: false, vertical: true)
-        .frame(width: 520)
-        .alert("key.restore.success", isPresented: $isSuccessPresented) {
-            Button(role: .cancel) {
-                dismiss()
-            } label: {
-                Text("key.ok")
+            .padding(.horizontal, 35)
+            .padding(.top, 35)
+            .padding(.bottom, 25)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(width: 520)
+            .alert("key.restore.success", isPresented: $isSuccessPresented) {
+                Button(role: .cancel) {
+                    dismiss()
+                } label: {
+                    Text("key.ok")
+                }
+            } message: {
+                Text("key.restore.success.message-\(email)")
             }
-        } message: {
-            Text("key.restore.success.message-\(email)")
+            .onDisappear {
+                appState.isSignInPresented = true
+            }
+            .analyticsScreen(name: "restore_sheet", class: "RestoreSheetView")
         }
-        .onDisappear {
-            appState.isSignInPresented = true
-        }
-        .analyticsScreen(name: "restore_sheet", class: "RestoreSheetView")
     }
 
     private func load() {

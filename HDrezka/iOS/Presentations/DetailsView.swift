@@ -1,8 +1,13 @@
+import CoreImage.CIFilterBuiltins
 import Defaults
-import FirebaseAnalytics
-import Kingfisher
+import Perception
 import SwiftUI
+import Vision
 import YouTubePlayerKit
+
+private func ratingColor(_ normalizedValue: Double) -> Color {
+    normalizedValue >= 0.7 ? .green : (normalizedValue >= 0.4 ? .orange : .red)
+}
 
 struct DetailsView: View {
     private let title: String?
@@ -29,13 +34,67 @@ struct DetailsView: View {
     @State private var listDestination: MovieList?
     @State private var collectionDestination: MoviesCollection?
 
+    private var trailer: YouTubePlayer? {
+        guard let trailerId = viewModel.trailerId else {
+            return nil
+        }
+
+        return YouTubePlayer(source: .video(id: trailerId))
+    }
+
     var body: some View {
+        WithPerceptionTracking {
+            destinationView
+        }
+    }
+
+    private var destinationView: some View {
+        baseView
+            .navigationDestination(isPresented: isPresentedBinding($countryDestination)) {
+                if let countryDestination {
+                    ListView(country: countryDestination)
+                }
+            }
+            .navigationDestination(isPresented: isPresentedBinding($genreDestination)) {
+                if let genreDestination {
+                    ListView(genre: genreDestination)
+                }
+            }
+            .navigationDestination(isPresented: isPresentedBinding($personDestination)) {
+                if let personDestination {
+                    PersonView(person: personDestination)
+                }
+            }
+            .navigationDestination(isPresented: isPresentedBinding($listDestination)) {
+                if let listDestination {
+                    ListView(list: listDestination)
+                }
+            }
+            .navigationDestination(isPresented: isPresentedBinding($collectionDestination)) {
+                if let collectionDestination {
+                    ListView(collection: collectionDestination)
+                }
+            }
+    }
+
+    private func isPresentedBinding(_ value: Binding<(some Any)?>) -> Binding<Bool> {
+        Binding(
+            get: { value.wrappedValue != nil },
+            set: { isPresented in
+                if !isPresented {
+                    value.wrappedValue = nil
+                }
+            },
+        )
+    }
+
+    private var contentView: some View {
         ScrollView(.vertical) {
             LazyVStack(alignment: .leading, spacing: 18) {
                 if let details = viewModel.state.data {
-                    DetailsViewComponent(
+                    AnyView(DetailsViewComponent(
                         details: details,
-                        trailerId: viewModel.trailerId,
+                        trailer: trailer,
                         topSafeAreaInset: topSafeAreaInset,
                         isSchedulePresented: $isSchedulePresented,
                         countryDestination: $countryDestination,
@@ -44,138 +103,129 @@ struct DetailsView: View {
                         listDestination: $listDestination,
                         collectionDestination: $collectionDestination,
                     )
-                    .environment(viewModel)
+                    .environment(viewModel))
                 }
             }
         }
-        .scrollIndicators(.visible, axes: .vertical)
-        .viewModifier { view in
-            if #available(iOS 26, *) {
-                view.scrollEdgeEffectStyle(.soft, for: .all)
-            } else {
-                view
-            }
-        }
-        .ignoresSafeArea(edges: .top)
-        .contentMargins(.top, topSafeAreaInset, for: .scrollIndicators)
-        .overlay {
-            if let error = viewModel.state.error {
-                ErrorStateView(error) {
-                    viewModel.load()
+    }
+
+    private var baseView: some View {
+        let headerConfigured = contentView
+            .scrollIndicators(.visible, axes: .vertical)
+            .viewModifier { view in
+                if #available(iOS 26, *) {
+                    view.scrollEdgeEffectStyle(.soft, for: .all)
+                } else {
+                    view
                 }
-                .padding(.vertical, 18)
-                .padding(.horizontal, 36)
-            } else if viewModel.state == .loading {
-                LoadingStateView()
+            }
+            .ignoresSafeArea(edges: .top)
+            .viewModifier { view in
+                if #available(iOS 17, *) {
+                    view.contentMargins(.top, topSafeAreaInset, for: .scrollIndicators)
+                } else {
+                    view
+                }
+            }
+            .overlay {
+                if let error = viewModel.state.error {
+                    ErrorStateView(error) {
+                        viewModel.load()
+                    }
                     .padding(.vertical, 18)
                     .padding(.horizontal, 36)
+                } else if viewModel.state == .loading {
+                    LoadingStateView()
+                        .padding(.vertical, 18)
+                        .padding(.horizontal, 36)
+                }
             }
-        }
-        .transition(.opacity)
-        .navigationTitle(viewModel.state.data?.nameRussian ?? title ?? "")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                if let details = viewModel.state.data {
-                    NavigationLink(value: Destinations.comments(details)) {
-                        HStack(alignment: .center, spacing: 4) {
-                            Image(systemName: "bubble.left.and.bubble.right")
+            .navigationTitle(viewModel.state.data?.nameRussian ?? title ?? "")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    if let details = viewModel.state.data {
+                        NavigationLink(value: Destinations.comments(details)) {
+                            HStack(alignment: .center, spacing: 4) {
+                                Image(systemName: "bubble.left.and.bubble.right")
 
-                            if let details = viewModel.state.data, details.commentsCount > 0 {
-                                Text(verbatim: "(\(details.commentsCount))")
+                                if let details = viewModel.state.data, details.commentsCount > 0 {
+                                    Text(verbatim: "(\(details.commentsCount))")
+                                }
                             }
                         }
                     }
-                }
 
-                if isLoggedIn {
-                    Button {
-                        isBookmarksPresented = true
-                    } label: {
-                        Image(systemName: "bookmark")
+                    if isLoggedIn {
+                        Button {
+                            isBookmarksPresented = true
+                        } label: {
+                            Image(systemName: "bookmark")
+                        }
+                        .disabled(viewModel.state.data == nil)
+                    }
+
+                    ShareLink(item: (mirror != _mirror.defaultValue ? mirror : Const.redirectMirror).appending(path: viewModel.id, directoryHint: .notDirectory)) {
+                        Image(systemName: "square.and.arrow.up")
                     }
                     .disabled(viewModel.state.data == nil)
                 }
+            }
 
-                ShareLink(item: (!_mirror.isDefaultValue ? mirror : Const.redirectMirror).appending(path: viewModel.id, directoryHint: .notDirectory)) {
-                    Image(systemName: "square.and.arrow.up")
+        return AnyView(headerConfigured
+            .onGeometryChange(for: CGFloat.self) { geometry in
+                geometry.safeAreaInsets.top
+            } action: { inset in
+                topSafeAreaInset = inset
+            }
+            .task(id: isLoggedIn) {
+                switch viewModel.state {
+                case .data:
+                    break
+                default:
+                    viewModel.load()
                 }
-                .disabled(viewModel.state.data == nil)
             }
-        }
-        .onGeometryChange(for: CGFloat.self) { geometry in
-            geometry.safeAreaInsets.top
-        } action: { inset in
-            topSafeAreaInset = inset
-        }
-        .onAppear {
-            switch viewModel.state {
-            case .data:
-                break
-            default:
-                viewModel.load()
+            .refreshable {
+                if viewModel.state.data != nil {
+                    viewModel.load()
+                }
             }
-        }
-        .refreshable {
-            if viewModel.state.data != nil {
-                viewModel.load()
+            .sheet(isPresented: $isBookmarksPresented) {
+                BookmarksSheetView(id: viewModel.id, isCreateBookmarkPresented: $isCreateBookmarkPresented)
             }
-        }
-        .sheet(isPresented: $isBookmarksPresented) {
-            BookmarksSheetView(id: viewModel.id, isCreateBookmarkPresented: $isCreateBookmarkPresented)
-                .presentationSizing(.fitted)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $isCreateBookmarkPresented) {
-            CreateBookmarkSheetView()
-                .presentationSizing(.fitted)
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $isSchedulePresented) {
-            if let details = viewModel.state.data, let schedule = details.schedule, !schedule.isEmpty {
-                ScheduleSheetView(schedule: schedule)
-                    .presentationSizing(.fitted)
-                    .presentationDetents([.large])
-                    .presentationDragIndicator(.visible)
+            .sheet(isPresented: $isCreateBookmarkPresented) {
+                CreateBookmarkSheetView()
             }
-        }
-        .alert("key.ops", isPresented: $viewModel.isErrorPresented) {
-            Button(role: .cancel) {} label: {
-                Text("key.ok")
+            .sheet(isPresented: $isSchedulePresented) {
+                if let details = viewModel.state.data, let schedule = details.schedule, !schedule.isEmpty {
+                    ScheduleSheetView(schedule: schedule)
+                }
             }
-        } message: {
-            if let error = viewModel.error {
-                Text(error.localizedDescription)
+            .alert("key.ops", isPresented: $viewModel.isErrorPresented) {
+                Button(role: .cancel) {} label: {
+                    Text("key.ok")
+                }
+            } message: {
+                if let error = viewModel.error {
+                    Text(error.localizedDescription)
+                }
             }
-        }
-        .onChange(of: isCreateBookmarkPresented) {
-            isBookmarksPresented = !isCreateBookmarkPresented
-        }
-        .background(.background)
-        .navigationDestination(item: $countryDestination) {
-            ListView(country: $0)
-        }
-        .navigationDestination(item: $genreDestination) {
-            ListView(genre: $0)
-        }
-        .navigationDestination(item: $personDestination) {
-            PersonView(person: $0)
-        }
-        .navigationDestination(item: $listDestination) {
-            ListView(list: $0)
-        }
-        .navigationDestination(item: $collectionDestination) {
-            ListView(collection: $0)
-        }
+            .onChange(of: isCreateBookmarkPresented) { _ in
+                isBookmarksPresented = !isCreateBookmarkPresented
+            }
+            .background(.background))
     }
 
     private struct DetailsViewComponent: View {
         private let details: MovieDetailed
-        private let trailerId: String?
+        private let trailer: YouTubePlayer?
         private let topSafeAreaInset: CGFloat
         @Binding private var isSchedulePresented: Bool
+
+        @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+//        @Environment(Downloader.self) private var downloader
 
         @Binding private var countryDestination: MovieCountry?
         @Binding private var genreDestination: MovieGenre?
@@ -184,7 +234,7 @@ struct DetailsView: View {
         @Binding private var collectionDestination: MoviesCollection?
 
         init(details: MovieDetailed,
-             trailerId: String?,
+             trailer: YouTubePlayer?,
              topSafeAreaInset: CGFloat,
              isSchedulePresented: Binding<Bool>,
              countryDestination: Binding<MovieCountry?>,
@@ -194,7 +244,7 @@ struct DetailsView: View {
              collectionDestination: Binding<MoviesCollection?>)
         {
             self.details = details
-            self.trailerId = trailerId
+            self.trailer = trailer
             self.topSafeAreaInset = topSafeAreaInset
             _isSchedulePresented = isSchedulePresented
             _countryDestination = countryDestination
@@ -207,8 +257,6 @@ struct DetailsView: View {
         @State private var isPlayPresented: Bool = false
         @State private var isDownloadPresented: Bool = false
         @State private var isOpenExternalPlayerPresented: Bool = false
-        @State private var playerData: PlayerData?
-        @State private var imageURL: IdentifiableURL?
 
         @State private var franchiseExpanded: Bool = false
 
@@ -216,324 +264,36 @@ struct DetailsView: View {
 
         @Environment(\.colorScheme) private var colorScheme
         @Environment(\.openWindow) private var openWindow
-        @Environment(\.dismissWindow) private var dismissWindow
-        @Environment(\.openURL) private var openURL
 
         var body: some View {
             VStack(spacing: 18) {
                 VStack(alignment: .center, spacing: 18) {
-                    OrientationView { orientation in
-                        VStack(alignment: .center, spacing: 18) {
-                            Button {
-                                if let url = URL(string: details.hposter) ?? URL(string: details.poster) {
-                                    imageURL = .init(url: url)
-                                }
-                            } label: {
-                                KFImage
-                                    .url(URL(string: details.hposter))
-                                    .placeholder {
-                                        KFImage
-                                            .url(URL(string: details.poster))
-                                            .placeholder {
-                                                Color.gray.shimmering()
-                                            }
-                                            .resizable()
-                                            .loadTransition(.blurReplace, animation: .easeInOut)
-                                            .cancelOnDisappear(true)
-                                            .retry(NetworkRetryStrategy())
-                                    }
-                                    .resizable()
-                                    .loadTransition(.blurReplace, animation: .easeInOut)
-                                    .cancelOnDisappear(true)
-                                    .retry(NetworkRetryStrategy())
-                                    .imageFill(2 / 3)
-                                    .frame(width: 300)
-                                    .contentShape(.rect(cornerRadius: 6))
-                                    .clipShape(.rect(cornerRadius: 6))
-                            }
-                            .buttonStyle(.plain)
-                            .matchedGeometryEffect(id: "poster", in: orientation)
-
-                            VStack(alignment: .center, spacing: 16) {
-                                VStack(alignment: .center, spacing: 8) {
-                                    Text(details.nameRussian)
-                                        .font(.largeTitle.weight(.semibold))
-                                        .textSelection(.enabled)
-                                        .multilineTextAlignment(.center)
-                                        .matchedGeometryEffect(id: "nameRussian", in: orientation)
-
-                                    if let nameOriginal = details.nameOriginal {
-                                        Text(nameOriginal)
-                                            .font(.title3)
-                                            .foregroundStyle(.secondary)
-                                            .textSelection(.enabled)
-                                            .multilineTextAlignment(.center)
-                                            .matchedGeometryEffect(id: "nameOriginal", in: orientation)
-                                    }
-                                }
-
-                                HStack(alignment: .center, spacing: 12) {
-                                    if details.available {
-                                        Button {
-                                            isPlayPresented = true
-                                        } label: {
-                                            Label("key.watch", systemImage: "play.fill")
-                                                .font(.body)
-                                                .foregroundStyle(.white)
-                                                .padding(.horizontal, 14)
-                                                .padding(.vertical, 7)
-                                                .lineLimit(1)
-                                                .contentShape(.capsule)
-                                                .background(Color.accentColor, in: .capsule)
-                                        }
-                                        .buttonStyle(.plain)
-
-                                        Button {
-                                            isDownloadPresented = true
-                                        } label: {
-                                            Label("key.download", systemImage: "arrow.down.circle")
-                                                .font(.body)
-                                                .foregroundStyle(Color.accentColor)
-                                                .padding(.horizontal, 14)
-                                                .padding(.vertical, 7)
-                                                .lineLimit(1)
-                                                .contentShape(.capsule)
-                                                .background(.tertiary.opacity(0.05), in: .capsule)
-                                                .overlay(.tertiary.opacity(0.2), in: .capsule.stroke(lineWidth: 1))
-                                        }
-                                        .buttonStyle(.plain)
-
-                                        if ExternalPlayers.allCases.contains(where: { UIApplication.shared.canOpenURL($0.url) }) {
-                                            Button {
-                                                isOpenExternalPlayerPresented = true
-                                            } label: {
-                                                Label("key.open.external", systemImage: "arrow.up.forward.app")
-                                                    .font(.body)
-                                                    .foregroundStyle(Color.accentColor)
-                                                    .padding(.horizontal, 14)
-                                                    .padding(.vertical, 7)
-                                                    .lineLimit(1)
-                                                    .contentShape(.capsule)
-                                                    .background(.tertiary.opacity(0.05), in: .capsule)
-                                                    .overlay(.tertiary.opacity(0.2), in: .capsule.stroke(lineWidth: 1))
-                                            }
-                                            .buttonStyle(.plain)
-                                        }
-                                    } else if details.comingSoon {
-                                        Button {} label: {
-                                            Label("key.soon", systemImage: "clock")
-                                                .font(.body)
-                                                .foregroundStyle(.white)
-                                                .padding(.horizontal, 14)
-                                                .padding(.vertical, 7)
-                                                .background(Color.accentColor, in: .capsule)
-                                        }
-                                        .buttonStyle(.plain)
-                                        .disabled(true)
-                                    } else {
-                                        Button {} label: {
-                                            Label("key.unavailable", systemImage: "network.slash")
-                                                .font(.body)
-                                                .foregroundStyle(.white)
-                                                .padding(.horizontal, 14)
-                                                .padding(.vertical, 7)
-                                                .background(Color.accentColor, in: .capsule)
-                                        }
-                                        .buttonStyle(.plain)
-                                        .disabled(true)
-                                    }
-                                }
-                                .matchedGeometryEffect(id: "buttons", in: orientation)
-
-                                if details.slogan?.isEmpty == false
-                                    ||
-                                    details.releaseDate?.isEmpty == false
-                                    ||
-                                    details.year?.isEmpty == false
-                                    ||
-                                    details.countries?.isEmpty == false
-                                    ||
-                                    details.genres?.isEmpty == false
-                                    ||
-                                    details.producer?.isEmpty == false
-                                    ||
-                                    details.actors?.isEmpty == false
-                                    ||
-                                    details.lists?.isEmpty == false
-                                    ||
-                                    details.collections?.isEmpty == false
-                                    ||
-                                    details.rating != nil
-                                {
-                                    VStack(alignment: .leading, spacing: 0) {
-                                        if let slogan = details.slogan, !slogan.isEmpty {
-                                            InfoRow(String(localized: "key.info.slogan"), slogan)
-                                        }
-
-                                        if let releaseDate = details.releaseDate, !releaseDate.isEmpty {
-                                            if details.slogan?.isEmpty == false {
-                                                Divider()
-                                            }
-
-                                            InfoRow(String(localized: "key.info.date"), releaseDate)
-                                        }
-
-                                        if let year = details.year, !year.isEmpty {
-                                            if details.slogan?.isEmpty == false || details.releaseDate?.isEmpty == false {
-                                                Divider()
-                                            }
-
-                                            InfoRow(String(localized: "key.info.year"), year)
-                                        }
-
-                                        if let countries = details.countries, !countries.isEmpty {
-                                            if details.slogan?.isEmpty == false || details.releaseDate?.isEmpty == false || details.year?.isEmpty == false {
-                                                Divider()
-                                            }
-
-                                            InfoRowWithButtons(
-                                                String(localized: "key.info.country"),
-                                                String(localized: "key.info.country.description"),
-                                                countries,
-                                                countryDestination: $countryDestination,
-                                                genreDestination: $genreDestination,
-                                                personDestination: $personDestination,
-                                                listDestination: $listDestination,
-                                                collectionDestination: $collectionDestination,
-                                            )
-                                        }
-
-                                        if let genres = details.genres, !genres.isEmpty {
-                                            if details.slogan?.isEmpty == false || details.releaseDate?.isEmpty == false || details.year?.isEmpty == false || details.countries?.isEmpty == false {
-                                                Divider()
-                                            }
-
-                                            InfoRowWithButtons(
-                                                String(localized: "key.info.genres"),
-                                                String(localized: "key.info.genres.description"),
-                                                genres,
-                                                countryDestination: $countryDestination,
-                                                genreDestination: $genreDestination,
-                                                personDestination: $personDestination,
-                                                listDestination: $listDestination,
-                                                collectionDestination: $collectionDestination,
-                                            )
-                                        }
-
-                                        if let producer = details.producer, !producer.isEmpty {
-                                            if details.slogan?.isEmpty == false || details.releaseDate?.isEmpty == false || details.year?.isEmpty == false || details.countries?.isEmpty == false || details.genres?.isEmpty == false {
-                                                Divider()
-                                            }
-
-                                            InfoRowWithButtons(
-                                                String(localized: "key.info.producer"),
-                                                String(localized: "key.info.producer.description"),
-                                                producer,
-                                                countryDestination: $countryDestination,
-                                                genreDestination: $genreDestination,
-                                                personDestination: $personDestination,
-                                                listDestination: $listDestination,
-                                                collectionDestination: $collectionDestination,
-                                            )
-                                        }
-
-                                        if let actors = details.actors, !actors.isEmpty {
-                                            if details.slogan?.isEmpty == false || details.releaseDate?.isEmpty == false || details.year?.isEmpty == false || details.countries?.isEmpty == false || details.genres?.isEmpty == false || details.producer?.isEmpty == false {
-                                                Divider()
-                                            }
-
-                                            InfoRowWithButtons(
-                                                String(localized: "key.info.actors"),
-                                                String(localized: "key.info.actors.description"),
-                                                actors,
-                                                countryDestination: $countryDestination,
-                                                genreDestination: $genreDestination,
-                                                personDestination: $personDestination,
-                                                listDestination: $listDestination,
-                                                collectionDestination: $collectionDestination,
-                                            )
-                                        }
-
-                                        if let lists = details.lists, !lists.isEmpty {
-                                            if details.slogan?.isEmpty == false || details.releaseDate?.isEmpty == false || details.year?.isEmpty == false || details.countries?.isEmpty == false || details.genres?.isEmpty == false || details.producer?.isEmpty == false || details.actors?.isEmpty == false {
-                                                Divider()
-                                            }
-
-                                            InfoRowWithButtons(
-                                                String(localized: "key.info.lists"),
-                                                String(localized: "key.info.lists.description"),
-                                                lists,
-                                                countryDestination: $countryDestination,
-                                                genreDestination: $genreDestination,
-                                                personDestination: $personDestination,
-                                                listDestination: $listDestination,
-                                                collectionDestination: $collectionDestination,
-                                            )
-                                        }
-
-                                        if let collections = details.collections, !collections.isEmpty {
-                                            if details.slogan?.isEmpty == false || details.releaseDate?.isEmpty == false || details.year?.isEmpty == false || details.countries?.isEmpty == false || details.genres?.isEmpty == false || details.producer?.isEmpty == false || details.actors?.isEmpty == false || details.lists?.isEmpty == false {
-                                                Divider()
-                                            }
-
-                                            InfoRowWithButtons(
-                                                String(localized: "key.info.collections"),
-                                                String(localized: "key.info.collections.description"),
-                                                collections,
-                                                countryDestination: $countryDestination,
-                                                genreDestination: $genreDestination,
-                                                personDestination: $personDestination,
-                                                listDestination: $listDestination,
-                                                collectionDestination: $collectionDestination,
-                                            )
-                                        }
-
-                                        if let rating = details.rating {
-                                            if details.slogan?.isEmpty == false || details.releaseDate?.isEmpty == false || details.year?.isEmpty == false || details.countries?.isEmpty == false || details.genres?.isEmpty == false || details.producer?.isEmpty == false || details.actors?.isEmpty == false || details.lists?.isEmpty == false || details.collections?.isEmpty == false {
-                                                Divider()
-                                            }
-
-                                            InfoRowRating(String(localized: "key.info.rating"), rating, details.rated, details.votes)
-                                        }
-                                    }
-                                    .padding(.horizontal, 10)
-                                    .background(.quinary, in: .rect(cornerRadius: 6))
-                                    .overlay(.tertiary, in: .rect(cornerRadius: 6).stroke(lineWidth: 1))
-                                    .matchedGeometryEffect(id: "info", in: orientation)
-                                }
-                            }
-                        }
-                    } landscape: { orientation in
+                    if horizontalSizeClass == .regular {
                         HStack(alignment: .bottom, spacing: 27) {
                             Button {
                                 if let url = URL(string: details.hposter) ?? URL(string: details.poster) {
-                                    imageURL = .init(url: url)
+                                    openWindow(id: "imageViewer", value: url)
                                 }
                             } label: {
-                                KFImage
-                                    .url(URL(string: details.hposter))
-                                    .placeholder {
-                                        KFImage
-                                            .url(URL(string: details.poster))
-                                            .placeholder {
+                                AsyncImage(url: URL(string: details.hposter), transaction: .init(animation: .easeInOut)) { phase in
+                                    if let image = phase.image {
+                                        image.resizable()
+                                    } else {
+                                        AsyncImage(url: URL(string: details.poster), transaction: .init(animation: .easeInOut)) { phase in
+                                            if let image = phase.image {
+                                                image.resizable()
+                                            } else {
                                                 Color.gray.shimmering()
                                             }
-                                            .resizable()
-                                            .loadTransition(.blurReplace, animation: .easeInOut)
-                                            .cancelOnDisappear(true)
-                                            .retry(NetworkRetryStrategy())
+                                        }
                                     }
-                                    .resizable()
-                                    .loadTransition(.blurReplace, animation: .easeInOut)
-                                    .cancelOnDisappear(true)
-                                    .retry(NetworkRetryStrategy())
-                                    .imageFill(2 / 3)
-                                    .frame(width: 300)
-                                    .contentShape(.rect(cornerRadius: 6))
-                                    .clipShape(.rect(cornerRadius: 6))
+                                }
+                                .imageFill(2 / 3)
+                                .frame(width: 300)
+                                .contentShape(.rect(cornerRadius: 6))
+                                .clipShape(.rect(cornerRadius: 6))
                             }
                             .buttonStyle(.plain)
-                            .matchedGeometryEffect(id: "poster", in: orientation)
 
                             VStack(alignment: .leading, spacing: 16) {
                                 VStack(alignment: .leading, spacing: 8) {
@@ -541,7 +301,6 @@ struct DetailsView: View {
                                         .font(.largeTitle.weight(.semibold))
                                         .textSelection(.enabled)
                                         .multilineTextAlignment(.leading)
-                                        .matchedGeometryEffect(id: "nameRussian", in: orientation)
 
                                     if let nameOriginal = details.nameOriginal {
                                         Text(nameOriginal)
@@ -549,7 +308,6 @@ struct DetailsView: View {
                                             .foregroundStyle(.secondary)
                                             .textSelection(.enabled)
                                             .multilineTextAlignment(.leading)
-                                            .matchedGeometryEffect(id: "nameOriginal", in: orientation)
                                     }
                                 }
 
@@ -568,23 +326,31 @@ struct DetailsView: View {
                                                 .background(Color.accentColor, in: .capsule)
                                         }
                                         .buttonStyle(.plain)
-
-                                        Button {
-                                            isDownloadPresented = true
-                                        } label: {
-                                            Label("key.download", systemImage: "arrow.down.circle")
-                                                .font(.body)
-                                                .foregroundStyle(Color.accentColor)
-                                                .padding(.horizontal, 14)
-                                                .padding(.vertical, 7)
-                                                .lineLimit(1)
-                                                .contentShape(.capsule)
-                                                .background(.tertiary.opacity(0.05), in: .capsule)
-                                                .overlay(.tertiary.opacity(0.2), in: .capsule.stroke(lineWidth: 1))
+                                        .sheet(isPresented: $isPlayPresented) {
+                                            WatchSheetView(id: details.movieId)
                                         }
-                                        .buttonStyle(.plain)
 
-                                        if ExternalPlayers.allCases.contains(where: { UIApplication.shared.canOpenURL($0.url) }) {
+                                        //                                    if downloader.isRunning {
+                                        //                                        Button {
+                                        //                                            isDownloadPresented = true
+                                        //                                        } label: {
+                                        //                                            Label("key.download", systemImage: "arrow.down.circle")
+                                        //                                                .font(.body)
+                                        //                                                .foregroundStyle(Color.accentColor)
+                                        //                                                .padding(.horizontal, 14)
+                                        //                                                .padding(.vertical, 7)
+                                        //                                                .lineLimit(1)
+                                        //                                                .contentShape(.capsule)
+                                        //                                                .background(.tertiary.opacity(0.05), in: .capsule)
+                                        //                                                .overlay(.tertiary.opacity(0.2), in: .capsule.stroke(lineWidth: 1))
+                                        //                                        }
+                                        //                                        .buttonStyle(.plain)
+                                        //                                        .sheet(isPresented: $isDownloadPresented) {
+                                        //                                            DownloadSheetView(id: details.movieId)
+                                        //                                        }
+                                        //                                    }
+
+                                        if !ExternalPlayers.allCases.contains(where: { UIApplication.shared.canOpenURL($0.url) }) {
                                             Button {
                                                 isOpenExternalPlayerPresented = true
                                             } label: {
@@ -599,6 +365,9 @@ struct DetailsView: View {
                                                     .overlay(.tertiary.opacity(0.2), in: .capsule.stroke(lineWidth: 1))
                                             }
                                             .buttonStyle(.plain)
+                                            .sheet(isPresented: $isOpenExternalPlayerPresented) {
+                                                OpenExternalPlayerSheetView(id: details.movieId)
+                                            }
                                         }
                                     } else if details.comingSoon {
                                         Button {} label: {
@@ -624,7 +393,6 @@ struct DetailsView: View {
                                         .disabled(true)
                                     }
                                 }
-                                .matchedGeometryEffect(id: "buttons", in: orientation)
 
                                 if details.slogan?.isEmpty == false
                                     ||
@@ -780,36 +548,290 @@ struct DetailsView: View {
                                     .padding(.horizontal, 10)
                                     .background(.quinary, in: .rect(cornerRadius: 6))
                                     .overlay(.tertiary, in: .rect(cornerRadius: 6).stroke(lineWidth: 1))
-                                    .matchedGeometryEffect(id: "info", in: orientation)
                                 }
                             }
                         }
-                    }
-                    .sheet(isPresented: $isPlayPresented) {
-                        WatchSheetView(id: details.movieId, playerData: $playerData)
-                            .presentationSizing(.fitted)
-                            .presentationDetents([.large])
-                            .presentationDragIndicator(.visible)
-                    }
-                    .sheet(isPresented: $isDownloadPresented) {
-                        DownloadSheetView(id: details.movieId)
-                            .presentationSizing(.fitted)
-                            .presentationDetents([.large])
-                            .presentationDragIndicator(.visible)
-                    }
-                    .sheet(isPresented: $isOpenExternalPlayerPresented) {
-                        OpenExternalPlayerSheetView(id: details.movieId)
-                            .presentationSizing(.fitted)
-                            .presentationDetents([.large])
-                            .presentationDragIndicator(.visible)
-                    }
-                    .fullScreenCover(item: $playerData) { data in
-                        PlayerView(data: data)
-                            .analyticsScreen(name: "player", class: "PlayerView")
-                    }
-                    .fullScreenCover(item: $imageURL) { url in
-                        ImageView(url: url.url)
-                            .analyticsScreen(name: "image", class: "ImageView")
+                    } else {
+                        Button {
+                            if let url = URL(string: details.hposter) ?? URL(string: details.poster) {
+                                openWindow(id: "imageViewer", value: url)
+                            }
+                        } label: {
+                            AsyncImage(url: URL(string: details.hposter), transaction: .init(animation: .easeInOut)) { phase in
+                                if let image = phase.image {
+                                    image.resizable()
+                                } else {
+                                    AsyncImage(url: URL(string: details.poster), transaction: .init(animation: .easeInOut)) { phase in
+                                        if let image = phase.image {
+                                            image.resizable()
+                                        } else {
+                                            Color.gray.shimmering()
+                                        }
+                                    }
+                                }
+                            }
+                            .imageFill(2 / 3)
+                            .frame(width: 300)
+                            .contentShape(.rect(cornerRadius: 6))
+                            .clipShape(.rect(cornerRadius: 6))
+                        }
+                        .buttonStyle(.plain)
+
+                        VStack(alignment: .center, spacing: 16) {
+                            VStack(alignment: .center, spacing: 8) {
+                                Text(details.nameRussian)
+                                    .font(.largeTitle.weight(.semibold))
+                                    .textSelection(.enabled)
+                                    .multilineTextAlignment(.center)
+
+                                if let nameOriginal = details.nameOriginal {
+                                    Text(nameOriginal)
+                                        .font(.title3)
+                                        .foregroundStyle(.secondary)
+                                        .textSelection(.enabled)
+                                        .multilineTextAlignment(.center)
+                                }
+                            }
+
+                            HStack(alignment: .center, spacing: 12) {
+                                if details.available {
+                                    Button {
+                                        isPlayPresented = true
+                                    } label: {
+                                        Label("key.watch", systemImage: "play.fill")
+                                            .font(.body)
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 7)
+                                            .lineLimit(1)
+                                            .contentShape(.capsule)
+                                            .background(Color.accentColor, in: .capsule)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .sheet(isPresented: $isPlayPresented) {
+                                        WatchSheetView(id: details.movieId)
+                                    }
+
+                                    //                                    if downloader.isRunning {
+                                    //                                        Button {
+                                    //                                            isDownloadPresented = true
+                                    //                                        } label: {
+                                    //                                            Label("key.download", systemImage: "arrow.down.circle")
+                                    //                                                .font(.body)
+                                    //                                                .foregroundStyle(Color.accentColor)
+                                    //                                                .padding(.horizontal, 14)
+                                    //                                                .padding(.vertical, 7)
+                                    //                                                .lineLimit(1)
+                                    //                                                .contentShape(.capsule)
+                                    //                                                .background(.tertiary.opacity(0.05), in: .capsule)
+                                    //                                                .overlay(.tertiary.opacity(0.2), in: .capsule.stroke(lineWidth: 1))
+                                    //                                        }
+                                    //                                        .buttonStyle(.plain)
+                                    //                                        .sheet(isPresented: $isDownloadPresented) {
+                                    //                                            DownloadSheetView(id: details.movieId)
+                                    //                                        }
+                                    //                                    }
+
+                                    if !ExternalPlayers.allCases.contains(where: { UIApplication.shared.canOpenURL($0.url) }) {
+                                        Button {
+                                            isOpenExternalPlayerPresented = true
+                                        } label: {
+                                            Label("key.open.external", systemImage: "arrow.up.forward.app")
+                                                .font(.body)
+                                                .foregroundStyle(Color.accentColor)
+                                                .padding(.horizontal, 14)
+                                                .padding(.vertical, 7)
+                                                .lineLimit(1)
+                                                .contentShape(.capsule)
+                                                .background(.tertiary.opacity(0.05), in: .capsule)
+                                                .overlay(.tertiary.opacity(0.2), in: .capsule.stroke(lineWidth: 1))
+                                        }
+                                        .buttonStyle(.plain)
+                                        .sheet(isPresented: $isOpenExternalPlayerPresented) {
+                                            OpenExternalPlayerSheetView(id: details.movieId)
+                                        }
+                                    }
+                                } else if details.comingSoon {
+                                    Button {} label: {
+                                        Label("key.soon", systemImage: "clock")
+                                            .font(.body)
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 7)
+                                            .background(Color.accentColor, in: .capsule)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .disabled(true)
+                                } else {
+                                    Button {} label: {
+                                        Label("key.unavailable", systemImage: "network.slash")
+                                            .font(.body)
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 14)
+                                            .padding(.vertical, 7)
+                                            .background(Color.accentColor, in: .capsule)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .disabled(true)
+                                }
+                            }
+
+                            if details.slogan?.isEmpty == false
+                                ||
+                                details.releaseDate?.isEmpty == false
+                                ||
+                                details.year?.isEmpty == false
+                                ||
+                                details.countries?.isEmpty == false
+                                ||
+                                details.genres?.isEmpty == false
+                                ||
+                                details.producer?.isEmpty == false
+                                ||
+                                details.actors?.isEmpty == false
+                                ||
+                                details.lists?.isEmpty == false
+                                ||
+                                details.collections?.isEmpty == false
+                                ||
+                                details.rating != nil
+                            {
+                                VStack(alignment: .leading, spacing: 0) {
+                                    if let slogan = details.slogan, !slogan.isEmpty {
+                                        InfoRow(String(localized: "key.info.slogan"), slogan)
+                                    }
+
+                                    if let releaseDate = details.releaseDate, !releaseDate.isEmpty {
+                                        if details.slogan?.isEmpty == false {
+                                            Divider()
+                                        }
+
+                                        InfoRow(String(localized: "key.info.date"), releaseDate)
+                                    }
+
+                                    if let year = details.year, !year.isEmpty {
+                                        if details.slogan?.isEmpty == false || details.releaseDate?.isEmpty == false {
+                                            Divider()
+                                        }
+
+                                        InfoRow(String(localized: "key.info.year"), year)
+                                    }
+
+                                    if let countries = details.countries, !countries.isEmpty {
+                                        if details.slogan?.isEmpty == false || details.releaseDate?.isEmpty == false || details.year?.isEmpty == false {
+                                            Divider()
+                                        }
+
+                                        InfoRowWithButtons(
+                                            String(localized: "key.info.country"),
+                                            String(localized: "key.info.country.description"),
+                                            countries,
+                                            countryDestination: $countryDestination,
+                                            genreDestination: $genreDestination,
+                                            personDestination: $personDestination,
+                                            listDestination: $listDestination,
+                                            collectionDestination: $collectionDestination,
+                                        )
+                                    }
+
+                                    if let genres = details.genres, !genres.isEmpty {
+                                        if details.slogan?.isEmpty == false || details.releaseDate?.isEmpty == false || details.year?.isEmpty == false || details.countries?.isEmpty == false {
+                                            Divider()
+                                        }
+
+                                        InfoRowWithButtons(
+                                            String(localized: "key.info.genres"),
+                                            String(localized: "key.info.genres.description"),
+                                            genres,
+                                            countryDestination: $countryDestination,
+                                            genreDestination: $genreDestination,
+                                            personDestination: $personDestination,
+                                            listDestination: $listDestination,
+                                            collectionDestination: $collectionDestination,
+                                        )
+                                    }
+
+                                    if let producer = details.producer, !producer.isEmpty {
+                                        if details.slogan?.isEmpty == false || details.releaseDate?.isEmpty == false || details.year?.isEmpty == false || details.countries?.isEmpty == false || details.genres?.isEmpty == false {
+                                            Divider()
+                                        }
+
+                                        InfoRowWithButtons(
+                                            String(localized: "key.info.producer"),
+                                            String(localized: "key.info.producer.description"),
+                                            producer,
+                                            countryDestination: $countryDestination,
+                                            genreDestination: $genreDestination,
+                                            personDestination: $personDestination,
+                                            listDestination: $listDestination,
+                                            collectionDestination: $collectionDestination,
+                                        )
+                                    }
+
+                                    if let actors = details.actors, !actors.isEmpty {
+                                        if details.slogan?.isEmpty == false || details.releaseDate?.isEmpty == false || details.year?.isEmpty == false || details.countries?.isEmpty == false || details.genres?.isEmpty == false || details.producer?.isEmpty == false {
+                                            Divider()
+                                        }
+
+                                        InfoRowWithButtons(
+                                            String(localized: "key.info.actors"),
+                                            String(localized: "key.info.actors.description"),
+                                            actors,
+                                            countryDestination: $countryDestination,
+                                            genreDestination: $genreDestination,
+                                            personDestination: $personDestination,
+                                            listDestination: $listDestination,
+                                            collectionDestination: $collectionDestination,
+                                        )
+                                    }
+
+                                    if let lists = details.lists, !lists.isEmpty {
+                                        if details.slogan?.isEmpty == false || details.releaseDate?.isEmpty == false || details.year?.isEmpty == false || details.countries?.isEmpty == false || details.genres?.isEmpty == false || details.producer?.isEmpty == false || details.actors?.isEmpty == false {
+                                            Divider()
+                                        }
+
+                                        InfoRowWithButtons(
+                                            String(localized: "key.info.lists"),
+                                            String(localized: "key.info.lists.description"),
+                                            lists,
+                                            countryDestination: $countryDestination,
+                                            genreDestination: $genreDestination,
+                                            personDestination: $personDestination,
+                                            listDestination: $listDestination,
+                                            collectionDestination: $collectionDestination,
+                                        )
+                                    }
+
+                                    if let collections = details.collections, !collections.isEmpty {
+                                        if details.slogan?.isEmpty == false || details.releaseDate?.isEmpty == false || details.year?.isEmpty == false || details.countries?.isEmpty == false || details.genres?.isEmpty == false || details.producer?.isEmpty == false || details.actors?.isEmpty == false || details.lists?.isEmpty == false {
+                                            Divider()
+                                        }
+
+                                        InfoRowWithButtons(
+                                            String(localized: "key.info.collections"),
+                                            String(localized: "key.info.collections.description"),
+                                            collections,
+                                            countryDestination: $countryDestination,
+                                            genreDestination: $genreDestination,
+                                            personDestination: $personDestination,
+                                            listDestination: $listDestination,
+                                            collectionDestination: $collectionDestination,
+                                        )
+                                    }
+
+                                    if let rating = details.rating {
+                                        if details.slogan?.isEmpty == false || details.releaseDate?.isEmpty == false || details.year?.isEmpty == false || details.countries?.isEmpty == false || details.genres?.isEmpty == false || details.producer?.isEmpty == false || details.actors?.isEmpty == false || details.lists?.isEmpty == false || details.collections?.isEmpty == false {
+                                            Divider()
+                                        }
+
+                                        InfoRowRating(String(localized: "key.info.rating"), rating, details.rated, details.votes)
+                                    }
+                                }
+                                .padding(.horizontal, 10)
+                                .background(.quinary, in: .rect(cornerRadius: 6))
+                                .overlay(.tertiary, in: .rect(cornerRadius: 6).stroke(lineWidth: 1))
+                            }
+                        }
                     }
 
                     Divider().opacity(0)
@@ -832,19 +854,19 @@ struct DetailsView: View {
                 {
                     HStack(alignment: .center) {
                         if let imdbRating = details.imdbRating {
-                            let color = Color.red.mix(with: .green, by: Double(imdbRating.value / 10.0))
+                            let color = ratingColor(Double(imdbRating.value / 10.0))
 
                             InfoColumn("IMDb", imdbRating.value.description, StarsView(rating: imdbRating.value * 0.5, color: color), valueColor: color, hover: imdbRating.votesCount, url: URL(string: imdbRating.link))
                         }
 
                         if let kpRating = details.kpRating {
-                            let color = Color.red.mix(with: .green, by: Double(kpRating.value / 10.0))
+                            let color = ratingColor(Double(kpRating.value / 10.0))
 
                             InfoColumn("КиноПоиск", kpRating.value.description, StarsView(rating: kpRating.value * 0.5, color: color), valueColor: color, hover: kpRating.votesCount, url: URL(string: kpRating.link))
                         }
 
                         if let waRating = details.waRating {
-                            let color = Color.red.mix(with: .green, by: Double(waRating.value / 10.0))
+                            let color = ratingColor(Double(waRating.value / 10.0))
 
                             InfoColumn("World Art", waRating.value.description, StarsView(rating: waRating.value * 0.5, color: color), valueColor: color, hover: waRating.votesCount, url: URL(string: waRating.link))
                         }
@@ -865,25 +887,26 @@ struct DetailsView: View {
             .padding(.top, 18)
             .padding(.top, topSafeAreaInset)
             .background {
-                ZStack {
-                    KFImage
-                        .url(URL(string: details.poster))
-                        .placeholder {
+                ZStack(alignment: .topLeading) {
+                    AsyncImage(url: URL(string: details.poster), transaction: .init(animation: .easeInOut)) { phase in
+                        if let image = phase.image {
+                            image.resizable()
+                        } else {
                             Color.gray
                         }
-                        .resizable()
-                        .loadTransition(.opacity, animation: .easeInOut)
-                        .cancelOnDisappear(true)
-                        .retry(NetworkRetryStrategy())
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity)
-                        .frame(height: blurHeght)
-                        .clipShape(.rect)
+                    }
+                    .scaledToFill()
+                    .frame(maxWidth: .infinity)
+                    .frame(height: blurHeght)
+                    .clipShape(.rect)
 
-                    Rectangle().fill(.ultraThickMaterial)
+                    VStack {}
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(.ultraThickMaterial)
 
-                    Rectangle()
-                        .fill(.background)
+                    VStack {}
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(.background)
                         .mask {
                             LinearGradient(stops: [
                                 .init(color: .black.opacity(0.3), location: 0.9),
@@ -902,95 +925,48 @@ struct DetailsView: View {
                 }
             }
 
-            OrientationView { orientation in
-                VStack(alignment: .center, spacing: 18) {
-                    Text(details.description)
-                        .font(.title3)
-                        .textSelection(.enabled)
-                        .matchedGeometryEffect(id: "description", in: orientation)
-
-                    if let trailerId {
-                        Divider()
-
-                        #if DEBUG
-                            let isLoggingEnabled = true
-                        #else
-                            let isLoggingEnabled = false
-                        #endif
-
-                        let trailer = YouTubePlayer(
-                            source: .video(id: trailerId),
-                            parameters: .init(
-                                autoPlay: false,
-                                loopEnabled: true,
-                                showControls: true,
-                                showFullscreenButton: true,
-                            ),
-                            configuration: .init(
-                                openURLAction: .init { url, _ in
-                                    openURL(url)
-                                },
-                            ),
-                            isLoggingEnabled: isLoggingEnabled,
-                        )
-
-                        YouTubePlayerView(trailer, transaction: .init(animation: .easeInOut)) { state in
-                            if state.isIdle {
-                                ProgressView()
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            } else if let error = state.error {
-                                switch error {
-                                case .embeddedVideoPlayingNotAllowed:
-                                    EmptyView()
-                                default:
-                                    Text("key.youtube.error")
-                                }
-                            }
-                        }
-                        .aspectRatio(16 / 9, contentMode: .fit)
-                        .frame(maxWidth: .infinity)
-                        .contentShape(.rect(cornerRadius: 6))
-                        .clipShape(.rect(cornerRadius: 6))
-                        .onScrollVisibilityChange { isVisible in
-                            if !isVisible, trailer.isPlaying {
-                                Task {
-                                    try? await trailer.pause()
-                                }
-                            }
-                        }
-                        .matchedGeometryEffect(id: "trailer", in: orientation)
-                    }
-                }
-                .padding(.horizontal, 36)
-            } landscape: { orientation in
+            if horizontalSizeClass == .regular {
                 HStack(alignment: .center, spacing: 18) {
                     Text(details.description)
                         .font(.title3)
                         .textSelection(.enabled)
-                        .matchedGeometryEffect(id: "description", in: orientation)
 
-                    if let trailerId {
-                        #if DEBUG
-                            let isLoggingEnabled = true
-                        #else
-                            let isLoggingEnabled = false
-                        #endif
+                    if let trailer {
+                        YouTubePlayerView(trailer, transaction: .init(animation: .easeInOut)) { state in
+                            if state.isIdle {
+                                ProgressView()
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            } else if let error = state.error {
+                                switch error {
+                                case .embeddedVideoPlayingNotAllowed:
+                                    EmptyView()
+                                default:
+                                    Text("key.youtube.error")
+                                }
+                            }
+                        }
+                        .aspectRatio(16 / 9, contentMode: .fit)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(.rect(cornerRadius: 6))
+                        .clipShape(.rect(cornerRadius: 6))
+                        .onDisappear {
+                            if trailer.isPlaying {
+                                Task {
+                                    try? await trailer.pause()
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal, 36)
+            } else {
+                VStack(alignment: .center, spacing: 18) {
+                    Text(details.description)
+                        .font(.title3)
+                        .textSelection(.enabled)
 
-                        let trailer = YouTubePlayer(
-                            source: .video(id: trailerId),
-                            parameters: .init(
-                                autoPlay: false,
-                                loopEnabled: true,
-                                showControls: true,
-                                showFullscreenButton: true,
-                            ),
-                            configuration: .init(
-                                openURLAction: .init { url, _ in
-                                    openURL(url)
-                                },
-                            ),
-                            isLoggingEnabled: isLoggingEnabled,
-                        )
+                    if let trailer {
+                        Divider()
 
                         YouTubePlayerView(trailer, transaction: .init(animation: .easeInOut)) { state in
                             if state.isIdle {
@@ -1009,14 +985,13 @@ struct DetailsView: View {
                         .frame(maxWidth: .infinity)
                         .contentShape(.rect(cornerRadius: 6))
                         .clipShape(.rect(cornerRadius: 6))
-                        .onScrollVisibilityChange { isVisible in
-                            if !isVisible, trailer.isPlaying {
+                        .onDisappear {
+                            if trailer.isPlaying {
                                 Task {
                                     try? await trailer.pause()
                                 }
                             }
                         }
-                        .matchedGeometryEffect(id: "trailer", in: orientation)
                     }
                 }
                 .padding(.horizontal, 36)
@@ -1038,8 +1013,8 @@ struct DetailsView: View {
 
                             LazyVStack(alignment: .leading, spacing: 0) {
                                 ForEach(franchise.prefix(franchiseExpanded ? franchise.count : 5)) { fr in
-                                    if !fr.current, let movieId = fr.franchiseId {
-                                        NavigationLink(value: Destinations.details(MovieSimple(movieId: movieId, name: fr.name))) {
+                                    if !fr.current {
+                                        NavigationLink(value: Destinations.details(MovieSimple(movieId: fr.franchiseId ?? "", name: fr.name ?? ""))) {
                                             HStack(alignment: .center, spacing: 4) {
                                                 ZStack(alignment: .center) {
                                                     ZStack(alignment: .center) {
@@ -1053,11 +1028,11 @@ struct DetailsView: View {
                                                 .frame(width: 24, height: 24)
 
                                                 VStack(alignment: .leading) {
-                                                    Text(fr.name).font(.body)
+                                                    Text(fr.name ?? "").font(.body)
                                                         .lineLimit(1)
 
                                                     if let rating = fr.rating {
-                                                        let color = Color.red.mix(with: .green, by: Double(rating / 10.0))
+                                                        let color = ratingColor(Double(rating / 10.0))
                                                         let rating = Text(verbatim: "\(rating)").foregroundStyle(color)
                                                         let star = Text(Image(systemName: "star.fill")).foregroundStyle(color)
 
@@ -1091,11 +1066,11 @@ struct DetailsView: View {
                                             .frame(width: 24, height: 24)
 
                                             VStack(alignment: .leading) {
-                                                Text(fr.name).font(.body)
+                                                Text(fr.name ?? "").font(.body)
                                                     .lineLimit(1)
 
                                                 if let rating = fr.rating {
-                                                    let color = Color.red.mix(with: .green, by: Double(rating / 10.0))
+                                                    let color = ratingColor(Double(rating / 10.0))
                                                     let rating = Text(verbatim: "\(rating)").foregroundStyle(color)
                                                     let star = Text(Image(systemName: "star.fill")).foregroundStyle(color)
 
@@ -1128,9 +1103,9 @@ struct DetailsView: View {
                                         } label: {
                                             Text(franchiseExpanded ? String(localized: "key.hide").lowercased() : String(localized: "key.view_more").lowercased())
                                                 .font(.body)
+                                                .foregroundStyle(.primary)
                                         }
                                         .buttonStyle(.bordered)
-                                        .buttonBorderShape(.roundedRectangle(radius: 6))
 
                                         Spacer()
                                     }
@@ -1196,9 +1171,9 @@ struct DetailsView: View {
                                             } label: {
                                                 Text(String(localized: "key.view_more").lowercased())
                                                     .font(.body)
+                                                    .foregroundStyle(.primary)
                                             }
                                             .buttonStyle(.bordered)
-                                            .buttonBorderShape(.roundedRectangle(radius: 6))
 
                                             Spacer()
                                         }
@@ -1373,22 +1348,19 @@ struct DetailsView: View {
                                         } label: {
                                             if let person = item as? PersonSimple, !person.photo.isEmpty {
                                                 HStack(alignment: .center, spacing: 8) {
-                                                    KFImage
-                                                        .url(URL(string: person.photo))
-                                                        .placeholder {
+                                                    AsyncImage(url: URL(string: person.photo), transaction: .init(animation: .easeInOut)) { phase in
+                                                        if let image = phase.image, let uiImage = ImageRenderer(content: image).cgImage?.removeBackground() {
+                                                            Image(uiImage: uiImage).resizable()
+                                                        } else {
                                                             Color.gray.shimmering()
                                                         }
-                                                        .resizable()
-                                                        .loadTransition(.blurReplace, animation: .easeInOut)
-                                                        .removeBackground()
-                                                        .cancelOnDisappear(true)
-                                                        .retry(NetworkRetryStrategy())
-                                                        .imageFill(2 / 3)
-                                                        .frame(width: 36, height: 36)
-                                                        .background(.quinary)
-                                                        .clipShape(.circle)
-                                                        .padding(2)
-                                                        .overlay(.tertiary.opacity(0.2), in: .circle.stroke(lineWidth: 1))
+                                                    }
+                                                    .imageFill(2 / 3)
+                                                    .frame(width: 36, height: 36)
+                                                    .background(.quinary)
+                                                    .clipShape(.circle)
+                                                    .padding(2)
+                                                    .overlay(.tertiary.opacity(0.2), in: .circle.stroke(lineWidth: 1))
 
                                                     Text(person.name)
                                                         .font(.body)
@@ -1463,6 +1435,15 @@ struct DetailsView: View {
                                 .aspectRatio(contentMode: .fit)
                         }
                         .buttonStyle(.plain)
+                        .onHover { hover in
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                if hover {
+                                    self.hover = Float(index + 1)
+                                } else {
+                                    self.hover = nil
+                                }
+                            }
+                        }
                     } else {
                         Image(systemName: "star.fill")
                             .font(.system(.body, design: .rounded))
@@ -1481,9 +1462,16 @@ struct DetailsView: View {
 
                 HStack(alignment: .center, spacing: 4) {
                     stars
-                        .background(alignment: .leading) {
+                        .background {
                             GeometryReader { geometry in
-                                Color.secondary.frame(width: (CGFloat(rating) / 10.0) * geometry.size.width)
+                                let width = (CGFloat(hover ?? rating) / 10.0) * geometry.size.width
+
+                                HStack {
+                                    (hover != nil ? Color.primary : Color.secondary)
+                                        .frame(width: width)
+
+                                    Spacer(minLength: 0)
+                                }
                             }
                             .mask(stars)
                         }
@@ -1493,13 +1481,22 @@ struct DetailsView: View {
                         Text(verbatim: "\(rating)")
                             .font(.body.monospacedDigit())
                             .foregroundStyle(.secondary)
-                            .contentTransition(.numericText(value: Double(rating)))
 
-                        if let votes {
+                        if let votes, vote {
                             Text(verbatim: "(\(votes))")
                                 .font(.caption.monospacedDigit())
                                 .foregroundStyle(.secondary)
-                                .contentTransition(.numericText())
+                        }
+                    }
+                    .viewModifier { view in
+                        if votes != nil {
+                            view.onHover { hover in
+                                withAnimation(.easeInOut) {
+                                    vote = hover
+                                }
+                            }
+                        } else {
+                            view
                         }
                     }
                 }
@@ -1522,26 +1519,24 @@ struct DetailsView: View {
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
-                .onLongPressGesture {
-                    show = true
+                .onHover {
+                    show = $0
                 }
                 .popover(isPresented: $show) {
-                    KFImage
-                        .url(URL(string: person.photo))
-                        .placeholder {
+                    AsyncImage(url: URL(string: person.photo), transaction: .init(animation: .easeInOut)) { phase in
+                        if let image = phase.image, let uiImage = ImageRenderer(content: image).cgImage?.removeBackground() {
+                            Image(uiImage: uiImage).resizable()
+                        } else {
                             Color.gray.shimmering()
                         }
-                        .resizable()
-                        .loadTransition(.blurReplace, animation: .easeInOut)
-                        .removeBackground()
-                        .cancelOnDisappear(true)
-                        .retry(NetworkRetryStrategy())
-                        .frame(width: 64, height: 64)
-                        .background(.quinary)
-                        .clipShape(.circle)
-                        .padding(4)
-                        .overlay(.tertiary.opacity(0.2), in: .circle.stroke(lineWidth: 1))
-                        .padding(4)
+                    }
+                    .imageFill(2 / 3)
+                    .frame(width: 64, height: 64)
+                    .background(.quinary)
+                    .clipShape(.circle)
+                    .padding(4)
+                    .overlay(.tertiary.opacity(0.2), in: .circle.stroke(lineWidth: 1))
+                    .padding(4)
                 }
         }
     }
@@ -1567,9 +1562,15 @@ struct DetailsView: View {
 
         var body: some View {
             stars
-                .overlay(alignment: .leading) {
+                .overlay {
                     GeometryReader { geometry in
-                        color.frame(width: (rating / 5.0) * geometry.size.width)
+                        let width = (rating / 5.0) * geometry.size.width
+
+                        HStack {
+                            color.frame(width: width)
+
+                            Spacer(minLength: 0)
+                        }
                     }
                     .mask(stars)
                 }
@@ -1594,6 +1595,8 @@ struct DetailsView: View {
             self.url = url
         }
 
+        @State private var show: Bool = false
+
         var body: some View {
             HStack(alignment: .center, spacing: 0) {
                 Spacer()
@@ -1614,10 +1617,21 @@ struct DetailsView: View {
                                         }
                                     }
 
-                                if let hover {
+                                if let hover, show {
                                     Text(verbatim: "(\(hover))")
                                         .font(.subheadline)
                                         .foregroundStyle(.secondary)
+                                }
+                            }
+                            .viewModifier { view in
+                                if hover != nil {
+                                    view.onHover { hover in
+                                        withAnimation(.easeInOut) {
+                                            show = hover
+                                        }
+                                    }
+                                } else {
+                                    view
                                 }
                             }
 
@@ -1641,10 +1655,21 @@ struct DetailsView: View {
                                     }
                                 }
 
-                            if let hover {
+                            if let hover, show {
                                 Text(verbatim: "(\(hover))")
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
+                            }
+                        }
+                        .viewModifier { view in
+                            if hover != nil {
+                                view.onHover { hover in
+                                    withAnimation(.easeInOut) {
+                                        show = hover
+                                    }
+                                }
+                            } else {
+                                view
                             }
                         }
 
@@ -1655,15 +1680,57 @@ struct DetailsView: View {
                 Spacer()
             }
         }
+
+        private func ratingColor(_ normalizedValue: Double) -> Color {
+            normalizedValue >= 0.7 ? .green : (normalizedValue >= 0.4 ? .orange : .red)
+        }
     }
 }
 
-private struct IdentifiableURL: Identifiable, Hashable {
-    let id: UUID
-    let url: URL
+private extension CGImage {
+    func removeBackground() -> UIImage? {
+        guard #available(iOS 17, *) else {
+            return UIImage(cgImage: self)
+        }
 
-    init(url: URL) {
-        id = .init()
-        self.url = url
+        guard let uiImage = processImage(image: self) else {
+            return UIImage(cgImage: self)
+        }
+
+        return uiImage
+    }
+
+    @available(iOS 17, *)
+    func processImage(image: CGImage) -> UIImage? {
+        let inputImage = CIImage(cgImage: image)
+        let handler = VNImageRequestHandler(ciImage: inputImage)
+        let request = VNGenerateForegroundInstanceMaskRequest()
+
+        do { try handler.perform([request]) } catch { return nil }
+
+        guard let result = request.results?.first,
+              let maskPixelBuffer = try? result.generateScaledMaskForImage(forInstances: result.allInstances, from: handler),
+              let outputImage = inputImage.apply(maskImage: CIImage(cvPixelBuffer: maskPixelBuffer))
+        else {
+            return nil
+        }
+
+        return outputImage.render()
+    }
+}
+
+private extension CIImage {
+    func render() -> UIImage? {
+        guard let cgImage = CIContext(options: nil).createCGImage(self, from: extent) else { return nil }
+
+        return UIImage(cgImage: cgImage)
+    }
+
+    func apply(maskImage: CIImage) -> CIImage? {
+        let filter = CIFilter.blendWithMask()
+        filter.inputImage = self
+        filter.maskImage = maskImage
+        filter.backgroundImage = CIImage.empty()
+        return filter.outputImage
     }
 }

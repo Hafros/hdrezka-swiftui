@@ -8,21 +8,22 @@
 import Combine
 import Defaults
 import FactoryKit
+import Perception
 import Photos
 import SwiftData
 import UserNotifications
 
-@Observable
+@Perceptible
 class Downloader {
-    @ObservationIgnored static let shared = Downloader()
+    @PerceptionIgnored static let shared = Downloader()
 
-    @ObservationIgnored private var modelContext: ModelContext?
+    @PerceptionIgnored private var modelContext: ModelContext?
 
-    @ObservationIgnored private var subscriptions: Set<AnyCancellable> = []
+    @PerceptionIgnored private var subscriptions: Set<AnyCancellable> = []
 
-    @ObservationIgnored @LazyInjected(\.session) private var session
-    @ObservationIgnored @LazyInjected(\.saveWatchingStateUseCase) private var saveWatchingStateUseCase
-    @ObservationIgnored @LazyInjected(\.getMovieVideoUseCase) private var getMovieVideoUseCase
+    @PerceptionIgnored @LazyInjected(\.session) private var session
+    @PerceptionIgnored @LazyInjected(\.saveWatchingStateUseCase) private var saveWatchingStateUseCase
+    @PerceptionIgnored @LazyInjected(\.getMovieVideoUseCase) private var getMovieVideoUseCase
 
     var downloads: [Download] = []
 
@@ -75,7 +76,7 @@ class Downloader {
         #endif
     }
 
-    @ObservationIgnored
+    @PerceptionIgnored
     private var isAccessAllowed: Bool {
         let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
 

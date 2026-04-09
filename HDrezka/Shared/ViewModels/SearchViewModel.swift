@@ -1,21 +1,22 @@
 import Combine
 import FactoryKit
+import Perception
 import SwiftUI
 
-@Observable
+@Perceptible
 class SearchViewModel {
-    @ObservationIgnored @LazyInjected(\.searchUseCase) private var searchUseCase
+    @PerceptionIgnored @LazyInjected(\.searchUseCase) private var searchUseCase
 
     private(set) var state: DataState<[MovieSimple]> = .data([])
     private(set) var paginationState: DataPaginationState = .idle
 
     private(set) var title: String = .init(localized: "key.search")
 
-    @ObservationIgnored private var searchWork: DispatchWorkItem?
+    @PerceptionIgnored private var searchWork: DispatchWorkItem?
 
-    @ObservationIgnored private var subscriptions: Set<AnyCancellable> = []
+    @PerceptionIgnored private var subscriptions: Set<AnyCancellable> = []
 
-    @ObservationIgnored private var page = 1
+    @PerceptionIgnored private var page = 1
 
     var query: String = ""
 

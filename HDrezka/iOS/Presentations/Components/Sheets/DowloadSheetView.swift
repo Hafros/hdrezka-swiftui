@@ -2,7 +2,6 @@ import Combine
 import Defaults
 import FactoryKit
 import FirebaseAnalytics
-import SwiftData
 import SwiftUI
 
 struct DownloadSheetView: View {
@@ -15,12 +14,11 @@ struct DownloadSheetView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
-    @Environment(\.modelContext) private var modelContext
 
     @Environment(AppState.self) private var appState
     @Environment(Downloader.self) private var downloader
 
-    @Query private var selectPositions: [SelectPosition]
+    @State private var selectPositions: [SelectPositionSnapshot] = []
 
     @Default(.isUserPremium) private var isUserPremium
     @Default(.isLoggedIn) private var isLoggedIn
@@ -454,6 +452,8 @@ struct DownloadSheetView: View {
             Text("key.sign_in.access")
         }
         .onAppear {
+            loadSelectPositions()
+
             getMovieDetailsUseCase(movieId: id)
                 .receive(on: DispatchQueue.main)
                 .sink { completion in
@@ -468,7 +468,7 @@ struct DownloadSheetView: View {
                 }
                 .store(in: &subscriptions)
         }
-        .onChange(of: details) {
+        .onChange(of: details) { _ in
             if let details, let acting = details.voiceActing {
                 withAnimation(.easeInOut) {
                     selectedActing = if !isLoggedIn,
@@ -492,7 +492,7 @@ struct DownloadSheetView: View {
                 }
             }
         }
-        .onChange(of: selectedActing) {
+        .onChange(of: selectedActing) { _ in
             withAnimation(.easeInOut) {
                 selectedSeason = nil
                 selectedEpisode = nil
@@ -573,7 +573,7 @@ struct DownloadSheetView: View {
                 }
             }
         }
-        .onChange(of: selectedSeason) {
+        .onChange(of: selectedSeason) { _ in
             withAnimation(.easeInOut) {
                 selectedQuality = nil
                 movie = nil
@@ -596,7 +596,7 @@ struct DownloadSheetView: View {
                 }
             }
         }
-        .onChange(of: selectedEpisode) {
+        .onChange(of: selectedEpisode) { _ in
             withAnimation(.easeInOut) {
                 selectedQuality = nil
                 movie = nil
@@ -636,6 +636,10 @@ struct DownloadSheetView: View {
             }
         }
         .analyticsScreen(name: "download_sheet", class: "DownloadSheetView")
+    }
+
+    private func loadSelectPositions() {
+        selectPositions = PositionsStore.fetchSelectPositions()
     }
 
     private struct CustomLabelStyle: LabelStyle {

@@ -1,19 +1,20 @@
 import Combine
 import FactoryKit
+import Perception
 import SwiftUI
 
-@Observable
+@Perceptible
 class BookmarksViewModel {
-    @ObservationIgnored @LazyInjected(\.getBookmarksUseCase) private var getBookmarksUseCase
-    @ObservationIgnored @LazyInjected(\.getBookmarksByCategoryAddedUseCase) private var getBookmarksByCategoryAddedUseCase
-    @ObservationIgnored @LazyInjected(\.getBookmarksByCategoryPopularUseCase) private var getBookmarksByCategoryPopularUseCase
-    @ObservationIgnored @LazyInjected(\.getBookmarksByCategoryYearUseCase) private var getBookmarksByCategoryYearUseCase
-    @ObservationIgnored @LazyInjected(\.deleteBookmarksCategoryUseCase) private var deleteBookmarksCategoryUseCase
-    @ObservationIgnored @LazyInjected(\.moveBetweenBookmarksUseCase) private var moveBetweenBookmarksUseCase
-    @ObservationIgnored @LazyInjected(\.reorderBookmarksCategoriesUseCase) private var reorderBookmarksCategoriesUseCase
-    @ObservationIgnored @LazyInjected(\.removeFromBookmarksUseCase) private var removeFromBookmarksUseCase
+    @PerceptionIgnored @LazyInjected(\.getBookmarksUseCase) private var getBookmarksUseCase
+    @PerceptionIgnored @LazyInjected(\.getBookmarksByCategoryAddedUseCase) private var getBookmarksByCategoryAddedUseCase
+    @PerceptionIgnored @LazyInjected(\.getBookmarksByCategoryPopularUseCase) private var getBookmarksByCategoryPopularUseCase
+    @PerceptionIgnored @LazyInjected(\.getBookmarksByCategoryYearUseCase) private var getBookmarksByCategoryYearUseCase
+    @PerceptionIgnored @LazyInjected(\.deleteBookmarksCategoryUseCase) private var deleteBookmarksCategoryUseCase
+    @PerceptionIgnored @LazyInjected(\.moveBetweenBookmarksUseCase) private var moveBetweenBookmarksUseCase
+    @PerceptionIgnored @LazyInjected(\.reorderBookmarksCategoriesUseCase) private var reorderBookmarksCategoriesUseCase
+    @PerceptionIgnored @LazyInjected(\.removeFromBookmarksUseCase) private var removeFromBookmarksUseCase
 
-    @ObservationIgnored private var subscriptions: Set<AnyCancellable> = []
+    @PerceptionIgnored private var subscriptions: Set<AnyCancellable> = []
 
     private(set) var bookmarksState: DataState<[Bookmark]> = .loading
     private(set) var bookmarkState: DataState<[MovieSimple]> = .data([])
@@ -57,7 +58,7 @@ class BookmarksViewModel {
             .store(in: &subscriptions)
     }
 
-    @ObservationIgnored private var page = 1
+    @PerceptionIgnored private var page = 1
 
     private func getBookmark(isInitial: Bool = true) {
         if let selectedBookmark {

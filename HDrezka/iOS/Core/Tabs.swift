@@ -44,6 +44,7 @@ enum Tabs: Hashable, Identifiable, CaseIterable {
         }
     }
 
+    @available(iOS 18.0, *)
     var role: TabRole? {
         switch self {
         case .search:

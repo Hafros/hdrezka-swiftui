@@ -1,6 +1,7 @@
 import Foundation
 import SwiftData
 
+@available(iOS 17, macOS 14, tvOS 17, *)
 @Model
 class PlayerPosition {
     var id: String

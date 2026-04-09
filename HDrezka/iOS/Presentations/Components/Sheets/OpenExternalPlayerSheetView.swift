@@ -2,7 +2,6 @@ import Combine
 import Defaults
 import FactoryKit
 import FirebaseAnalytics
-import SwiftData
 import SwiftUI
 
 struct OpenExternalPlayerSheetView: View {
@@ -15,11 +14,10 @@ struct OpenExternalPlayerSheetView: View {
 
     @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
 
     @Environment(AppState.self) private var appState
 
-    @Query private var selectPositions: [SelectPosition]
+    @State private var selectPositions: [SelectPositionSnapshot] = []
 
     @Default(.isUserPremium) private var isUserPremium
     @Default(.isLoggedIn) private var isLoggedIn
@@ -421,22 +419,14 @@ struct OpenExternalPlayerSheetView: View {
                                         .store(in: &subscriptions)
                                 }
 
-                                if let position = selectPositions.first(where: { position in
-                                    position.id == selectedActing.voiceId
-                                }) {
-                                    position.acting = selectedActing.translatorId
-                                    position.season = selectedSeason?.seasonId
-                                    position.episode = selectedEpisode?.episodeId
-                                } else {
-                                    let position = SelectPosition(
-                                        id: selectedActing.voiceId,
-                                        acting: selectedActing.translatorId,
-                                        season: selectedSeason?.seasonId,
-                                        episode: selectedEpisode?.episodeId,
-                                    )
+                                PositionsStore.upsertSelectPosition(
+                                    id: selectedActing.voiceId,
+                                    acting: selectedActing.translatorId,
+                                    season: selectedSeason?.seasonId,
+                                    episode: selectedEpisode?.episodeId,
+                                )
 
-                                    modelContext.insert(position)
-                                }
+                                selectPositions = PositionsStore.fetchSelectPositions()
                             }
 
                             if let movie, let selectedQuality, let movieURL = movie.getClosestTo(quality: selectedQuality), let selectedSubtitles, let subtitlesURL = URL(string: selectedSubtitles.link) {
@@ -510,6 +500,8 @@ struct OpenExternalPlayerSheetView: View {
         .fixedSize(horizontal: false, vertical: true)
         .frame(width: 520)
         .onAppear {
+            selectPositions = PositionsStore.fetchSelectPositions()
+
             getMovieDetailsUseCase(movieId: id)
                 .receive(on: DispatchQueue.main)
                 .sink { completion in
@@ -524,7 +516,7 @@ struct OpenExternalPlayerSheetView: View {
                 }
                 .store(in: &subscriptions)
         }
-        .onChange(of: details) {
+        .onChange(of: details) { _ in
             if let details, let acting = details.voiceActing {
                 withAnimation(.easeInOut) {
                     selectedActing = if !isLoggedIn,
@@ -548,7 +540,7 @@ struct OpenExternalPlayerSheetView: View {
                 }
             }
         }
-        .onChange(of: selectedActing) {
+        .onChange(of: selectedActing) { _ in
             withAnimation(.easeInOut) {
                 selectedSeason = nil
                 selectedEpisode = nil
@@ -631,7 +623,7 @@ struct OpenExternalPlayerSheetView: View {
                 }
             }
         }
-        .onChange(of: selectedSeason) {
+        .onChange(of: selectedSeason) { _ in
             withAnimation(.easeInOut) {
                 selectedQuality = nil
                 movie = nil
@@ -654,7 +646,7 @@ struct OpenExternalPlayerSheetView: View {
                 }
             }
         }
-        .onChange(of: selectedEpisode) {
+        .onChange(of: selectedEpisode) { _ in
             withAnimation(.easeInOut) {
                 selectedQuality = nil
                 movie = nil

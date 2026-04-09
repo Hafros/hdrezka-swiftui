@@ -1,18 +1,19 @@
 import Combine
 import FactoryKit
+import Perception
 import SwiftUI
 
-@Observable
+@Perceptible
 class HomeViewModel {
-    @ObservationIgnored @LazyInjected(\.getHotMoviesUseCase) private var getHotMoviesUseCase
-//    @ObservationIgnored @LazyInjected(\.getFeaturedMoviesUseCase) private var getFeaturedMoviesUseCase
-    @ObservationIgnored @LazyInjected(\.getWatchingNowMoviesUseCase) private var getWatchingNowMoviesUseCase
-    @ObservationIgnored @LazyInjected(\.getLatestMoviesUseCase) private var getLatestMoviesUseCase
-    @ObservationIgnored @LazyInjected(\.getLatestNewestMoviesUseCase) private var getLatestNewestMoviesUseCase
-    @ObservationIgnored @LazyInjected(\.getPopularMoviesUseCase) private var getPopularMoviesUseCase
-    @ObservationIgnored @LazyInjected(\.getSoonMoviesUseCase) private var getSoonMoviesUseCase
+    @PerceptionIgnored @LazyInjected(\.getHotMoviesUseCase) private var getHotMoviesUseCase
+//    @PerceptionIgnored @LazyInjected(\.getFeaturedMoviesUseCase) private var getFeaturedMoviesUseCase
+    @PerceptionIgnored @LazyInjected(\.getWatchingNowMoviesUseCase) private var getWatchingNowMoviesUseCase
+    @PerceptionIgnored @LazyInjected(\.getLatestMoviesUseCase) private var getLatestMoviesUseCase
+    @PerceptionIgnored @LazyInjected(\.getLatestNewestMoviesUseCase) private var getLatestNewestMoviesUseCase
+    @PerceptionIgnored @LazyInjected(\.getPopularMoviesUseCase) private var getPopularMoviesUseCase
+    @PerceptionIgnored @LazyInjected(\.getSoonMoviesUseCase) private var getSoonMoviesUseCase
 
-    @ObservationIgnored private var subscriptions: Set<AnyCancellable> = []
+    @PerceptionIgnored private var subscriptions: Set<AnyCancellable> = []
 
     private(set) var state: DataState<[Category]> = .loading
     private(set) var paginationState: DataPaginationState = .idle

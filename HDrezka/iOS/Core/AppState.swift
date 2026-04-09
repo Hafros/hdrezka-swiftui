@@ -1,9 +1,10 @@
 import FirebaseAnalytics
+import Perception
 import SwiftUI
 
-@Observable
+@Perceptible
 class AppState {
-    @ObservationIgnored static let shared = AppState()
+    @PerceptionIgnored static let shared = AppState()
 
     var isSignInPresented = false
     var isSignUpPresented = false

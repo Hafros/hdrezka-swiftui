@@ -1,5 +1,6 @@
 import Defaults
 import Kingfisher
+import Perception
 import SwiftUI
 
 struct PersonView: View {
@@ -15,67 +16,68 @@ struct PersonView: View {
     @Default(.mirror) private var mirror
 
     var body: some View {
-        ScrollView(.vertical) {
-            LazyVStack(alignment: .center, spacing: 18) {
-                if let details = viewModel.state.data {
-                    PersonViewComponent(details: details)
-                }
-            }
-            .padding(.vertical, 18)
-        }
-        .scrollIndicators(.visible, axes: .vertical)
-        .viewModifier { view in
-            if #available(iOS 26, *) {
-                view.scrollEdgeEffectStyle(.soft, for: .all)
-            } else {
-                view
-            }
-        }
-        .overlay {
-            if let error = viewModel.state.error {
-                ErrorStateView(error) {
-                    viewModel.load()
+        WithPerceptionTracking {
+            ScrollView(.vertical) {
+                LazyVStack(alignment: .center, spacing: 18) {
+                    if let details = viewModel.state.data {
+                        PersonViewComponent(details: details)
+                    }
                 }
                 .padding(.vertical, 18)
-                .padding(.horizontal, 36)
-            } else if viewModel.state == .loading {
-                LoadingStateView()
+            }
+            .scrollIndicators(.visible, axes: .vertical)
+            .viewModifier { view in
+                if #available(iOS 26, *) {
+                    view.scrollEdgeEffectStyle(.soft, for: .all)
+                } else {
+                    view
+                }
+            }
+            .overlay {
+                if let error = viewModel.state.error {
+                    ErrorStateView(error) {
+                        viewModel.load()
+                    }
                     .padding(.vertical, 18)
                     .padding(.horizontal, 36)
-            }
-        }
-        .transition(.opacity)
-        .navigationTitle(title)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                ShareLink(item: (!_mirror.isDefaultValue ? mirror : Const.redirectMirror).appending(path: viewModel.id, directoryHint: .notDirectory)) {
-                    Image(systemName: "square.and.arrow.up")
+                } else if viewModel.state == .loading {
+                    LoadingStateView()
+                        .padding(.vertical, 18)
+                        .padding(.horizontal, 36)
                 }
-                .disabled(viewModel.state.data == nil)
             }
-        }
-        .onAppear {
-            switch viewModel.state {
-            case .data:
-                break
-            default:
-                viewModel.load()
+            .transition(.opacity)
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    ShareLink(item: (!_mirror.isDefaultValue ? mirror : Const.redirectMirror).appending(path: viewModel.id, directoryHint: .notDirectory)) {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .disabled(viewModel.state.data == nil)
+                }
             }
-        }
-        .refreshable {
-            if viewModel.state.data != nil {
-                viewModel.load()
+            .onAppear {
+                switch viewModel.state {
+                case .data:
+                    break
+                default:
+                    viewModel.load()
+                }
             }
+            .refreshable {
+                if viewModel.state.data != nil {
+                    viewModel.load()
+                }
+            }
+            .background(.background)
         }
-        .background(.background)
     }
 
     private struct PersonViewComponent: View {
         private let details: PersonDetailed
 
         @Environment(\.openWindow) private var openWindow
-        @Environment(\.dismissWindow) private var dismissWindow
 
         init(details: PersonDetailed) {
             self.details = details
@@ -86,8 +88,6 @@ struct PersonView: View {
                 VStack(alignment: .center, spacing: 18) {
                     Button {
                         if let url = URL(string: details.hphoto) ?? URL(string: details.photo) {
-                            dismissWindow(id: "imageViewer")
-
                             openWindow(id: "imageViewer", value: url)
                         }
                     } label: {
@@ -100,14 +100,26 @@ struct PersonView: View {
                                         Color.gray.shimmering()
                                     }
                                     .resizable()
-                                    .loadTransition(.blurReplace, animation: .easeInOut)
                                     .cancelOnDisappear(true)
                                     .retry(NetworkRetryStrategy())
+                                    .viewModifier { view in
+                                        if #available(iOS 17, *) {
+                                            view.loadTransition(.blurReplace, animation: .easeInOut)
+                                        } else {
+                                            view
+                                        }
+                                    }
                             }
                             .resizable()
-                            .loadTransition(.blurReplace, animation: .easeInOut)
                             .cancelOnDisappear(true)
                             .retry(NetworkRetryStrategy())
+                            .viewModifier { view in
+                                if #available(iOS 17, *) {
+                                    view.loadTransition(.blurReplace, animation: .easeInOut)
+                                } else {
+                                    view
+                                }
+                            }
                             .imageFill(2 / 3)
                             .frame(width: 250)
                             .contentShape(.rect(cornerRadius: 6))
@@ -203,8 +215,6 @@ struct PersonView: View {
                 HStack(alignment: .bottom, spacing: 27) {
                     Button {
                         if let url = URL(string: details.hphoto) ?? URL(string: details.photo) {
-                            dismissWindow(id: "imageViewer")
-
                             openWindow(id: "imageViewer", value: url)
                         }
                     } label: {
@@ -217,14 +227,26 @@ struct PersonView: View {
                                         Color.gray.shimmering()
                                     }
                                     .resizable()
-                                    .loadTransition(.blurReplace, animation: .easeInOut)
                                     .cancelOnDisappear(true)
                                     .retry(NetworkRetryStrategy())
+                                    .viewModifier { view in
+                                        if #available(iOS 17, *) {
+                                            view.loadTransition(.blurReplace, animation: .easeInOut)
+                                        } else {
+                                            view
+                                        }
+                                    }
                             }
                             .resizable()
-                            .loadTransition(.blurReplace, animation: .easeInOut)
                             .cancelOnDisappear(true)
                             .retry(NetworkRetryStrategy())
+                            .viewModifier { view in
+                                if #available(iOS 17, *) {
+                                    view.loadTransition(.blurReplace, animation: .easeInOut)
+                                } else {
+                                    view
+                                }
+                            }
                             .imageFill(2 / 3)
                             .frame(width: 250)
                             .contentShape(.rect(cornerRadius: 6))

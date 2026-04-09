@@ -6,9 +6,10 @@
 //
 
 import Foundation
+import Perception
 import YouTubeKit
 
-@Observable
+@Perceptible
 class DetailsViewTrailerViewModel {
     enum State: Equatable {
         case idle

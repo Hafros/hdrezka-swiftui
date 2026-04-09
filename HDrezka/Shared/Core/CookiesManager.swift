@@ -1,12 +1,13 @@
 import Combine
 import Defaults
 import Foundation
+import Perception
 
-@Observable
+@Perceptible
 class CookiesManager {
-    @ObservationIgnored static let shared = CookiesManager()
+    @PerceptionIgnored static let shared = CookiesManager()
 
-    @ObservationIgnored private var subscriptions: Set<AnyCancellable> = []
+    @PerceptionIgnored private var subscriptions: Set<AnyCancellable> = []
 
     init() {
         observe()

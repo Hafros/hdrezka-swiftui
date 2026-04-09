@@ -7,14 +7,30 @@ class AccountParser {
             .checker()
             .getWatchingLaterMovies()
             .map { movie in
-                try MovieWatchLater(
-                    watchLaterId: movie.getWatchingLaterId(),
-                    name: movie.getWatchingLaterName(),
-                    cover: movie.getWatchingLaterCover(),
-                    details: movie.getWatchingLaterDetails(),
-                    watchingInfo: movie.getWatchingLaterInfo(),
+                let titleCell = try movie.select(".td.title").first().orThrow()
+                let titleLink = try titleCell.select("a").first().orThrow()
+
+                let watchLaterId = try titleLink.attr("href").cleanPath.orThrow()
+                let name = try titleLink.text()
+                let cover = try titleLink.attr("data-cover_url")
+                let details = try titleCell.select("small").text()
+
+                let infoCell = try movie.select(".td.info").first().orThrow()
+                let buttonText = try infoCell.select("span").first()?.text()
+                let watchingInfo: String = if let buttonText {
+                    try infoCell.text().replacingOccurrences(of: buttonText, with: "")
+                } else {
+                    try infoCell.text()
+                }
+
+                return try MovieWatchLater(
+                    watchLaterId: watchLaterId,
+                    name: name,
+                    cover: cover,
+                    details: details,
+                    watchingInfo: watchingInfo,
                     date: movie.getWatchingLaterDate(),
-                    buttonText: movie.getWatchingLaterButtonText(),
+                    buttonText: buttonText,
                     dataId: movie.getWatchingLaterDataId(),
                     watched: movie.getWatchingLaterWatched(),
                 )

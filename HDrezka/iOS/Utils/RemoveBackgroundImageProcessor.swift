@@ -38,6 +38,8 @@ private extension CGImage {
     }
 
     func processImage(image: CGImage) -> UIImage? {
+        guard #available(iOS 17, *) else { return nil }
+
         let inputImage = CIImage(cgImage: image)
         let handler = VNImageRequestHandler(ciImage: inputImage)
         let request = VNGenerateForegroundInstanceMaskRequest()

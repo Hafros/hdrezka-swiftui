@@ -1,12 +1,13 @@
 import Combine
 import FactoryKit
+import Perception
 import SwiftUI
 
-@Observable
+@Perceptible
 class PersonViewModel {
-    @ObservationIgnored @LazyInjected(\.getPersonDetailsUseCase) private var getPersonDetailsUseCase
+    @PerceptionIgnored @LazyInjected(\.getPersonDetailsUseCase) private var getPersonDetailsUseCase
 
-    @ObservationIgnored let id: String
+    @PerceptionIgnored let id: String
 
     init(id: String) {
         self.id = id
@@ -14,7 +15,7 @@ class PersonViewModel {
 
     private(set) var state: DataState<PersonDetailed> = .loading
 
-    @ObservationIgnored private var subscriptions: Set<AnyCancellable> = []
+    @PerceptionIgnored private var subscriptions: Set<AnyCancellable> = []
 
     func load() {
         state = .loading

@@ -4,7 +4,7 @@ import Defaults
 import FactoryKit
 import Kingfisher
 import MediaPlayer
-import SwiftData
+import Perception
 import SwiftUI
 
 struct PlayerView: View {
@@ -19,12 +19,11 @@ struct PlayerView: View {
     @Default(.isMuted) private var isMuted
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
 
     @Environment(AppState.self) private var appState
 
-    @Query private var playerPositions: [PlayerPosition]
-    @Query private var selectPositions: [SelectPosition]
+    @State private var playerPositions: [PlayerPositionSnapshot] = []
+    @State private var selectPositions: [SelectPositionSnapshot] = []
 
     @State private var playerSubscriptions: Set<AnyCancellable> = []
     @State private var layerSubscriptions: Set<AnyCancellable> = []
@@ -219,7 +218,6 @@ struct PlayerView: View {
                                     } label: {
                                         Image(systemName: isMuted ? "speaker.slash.fill" : "speaker.wave.3.fill", variableValue: Double(volume))
                                             .font(.title2)
-                                            .contentTransition(.symbolEffect(.replace))
                                             .contentShape(.circle)
                                     }
                                     .buttonStyle(.plain)
@@ -266,7 +264,6 @@ struct PlayerView: View {
                                     } label: {
                                         Image(systemName: isPlaying ? "pause.fill" : "play.fill")
                                             .font(.largeTitle)
-                                            .contentTransition(.symbolEffect(.replace))
                                             .contentShape(.circle)
                                     }
                                     .buttonStyle(.plain)
@@ -527,7 +524,6 @@ struct PlayerView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .safeAreaPadding(.top)
         .ignoresSafeArea(edges: .top)
         .overlay(alignment: .topLeading) {
             Button {
@@ -545,17 +541,21 @@ struct PlayerView: View {
         }
         .background(Color.black)
         .preferredColorScheme(.dark)
+        .toolbar(.hidden, for: .navigationBar)
+        .navigationBarBackButtonHidden(true)
         .statusBarHidden(!isMaskShow && !isPictureInPictureActive)
         .persistentSystemOverlays(.hidden)
         .onAppear {
             initialVolume = volume
+            playerPositions = PositionsStore.fetchPlayerPositions()
+            selectPositions = PositionsStore.fetchSelectPositions()
 
             setupPlayer(subtitles: selectPositions.first(where: { position in position.id == voiceActing.voiceId })?.subtitles)
         }
         .onDisappear {
             resetPlayer()
         }
-        .onChange(of: scenePhase) {
+        .onChange(of: scenePhase) { _ in
             guard let player,
                   player.status == .readyToPlay
             else {
@@ -571,7 +571,7 @@ struct PlayerView: View {
                 }
             }
         }
-        .onChange(of: spatialAudio) {
+        .onChange(of: spatialAudio) { _ in
             guard let player,
                   player.status == .readyToPlay,
                   let currentItem = player.currentItem
@@ -610,24 +610,13 @@ struct PlayerView: View {
                 nowPlayingInfoCenter.nowPlayingInfo?[MPNowPlayingInfoPropertyCurrentPlaybackDate] = currentItem.currentDate()
                 nowPlayingInfoCenter.nowPlayingInfo?[MPNowPlayingInfoPropertyDefaultPlaybackRate] = player.defaultRate
 
-                if let position = playerPositions.first(where: { position in
-                    position.id == voiceActing.voiceId &&
-                        position.acting == voiceActing.translatorId &&
-                        position.season == season?.seasonId &&
-                        position.episode == episode?.episodeId
-                }) {
-                    position.position = currentTime
-                } else {
-                    let position = PlayerPosition(
-                        id: voiceActing.voiceId,
-                        acting: voiceActing.translatorId,
-                        season: season?.seasonId,
-                        episode: episode?.episodeId,
-                        position: currentTime,
-                    )
-
-                    modelContext.insert(position)
-                }
+                PositionsStore.upsertPlayerPosition(
+                    id: voiceActing.voiceId,
+                    acting: voiceActing.translatorId,
+                    season: season?.seasonId,
+                    episode: episode?.episodeId,
+                    position: currentTime,
+                )
 
                 updateNextTimer()
             }
@@ -643,22 +632,13 @@ struct PlayerView: View {
                                 .store(in: &playerSubscriptions)
                         }
 
-                        if let position = selectPositions.first(where: { position in
-                            position.id == voiceActing.voiceId
-                        }) {
-                            position.acting = voiceActing.translatorId
-                            position.season = season?.seasonId
-                            position.episode = episode?.episodeId
-                        } else {
-                            let position = SelectPosition(
-                                id: voiceActing.voiceId,
-                                acting: voiceActing.translatorId,
-                                season: season?.seasonId,
-                                episode: episode?.episodeId,
-                            )
-
-                            modelContext.insert(position)
-                        }
+                        PositionsStore.upsertSelectPosition(
+                            id: voiceActing.voiceId,
+                            acting: voiceActing.translatorId,
+                            season: season?.seasonId,
+                            episode: episode?.episodeId,
+                        )
+                        selectPositions = PositionsStore.fetchSelectPositions()
 
                         currentItem.asset.loadMediaSelectionGroup(for: .legible) { mediaSelectionGroup, _ in
                             if let mediaSelectionGroup {
@@ -666,9 +646,9 @@ struct PlayerView: View {
 
                                 withAnimation(.easeInOut(duration: 0.15)) {
                                     subtitlesOptions = mediaSelectionGroup.options.filter { $0.extendedLanguageTag != nil }
-                                } completion: {
-                                    self.subtitles = subtitles
                                 }
+
+                                self.subtitles = subtitles
                             }
                         }
 
@@ -991,9 +971,9 @@ struct PlayerView: View {
             nextTimer = nil
             subtitlesOptions = []
             isLoading = true
-        } completion: {
-            completion?()
         }
+
+        completion?()
 
         duration = .greatestFiniteMagnitude
         currentTime = 0.0
@@ -1010,21 +990,14 @@ struct PlayerView: View {
             if let mediaSelectionGroup {
                 currentItem.select(mediaSelectionGroup.options.filter { $0.extendedLanguageTag != nil }.first(where: { $0.extendedLanguageTag == language }), in: mediaSelectionGroup)
 
-                if let position = selectPositions.first(where: { position in
-                    position.id == voiceActing.voiceId
-                }) {
-                    position.subtitles = language
-                } else {
-                    let position = SelectPosition(
-                        id: voiceActing.voiceId,
-                        acting: voiceActing.translatorId,
-                        season: season?.seasonId,
-                        episode: episode?.episodeId,
-                        subtitles: language,
-                    )
-
-                    modelContext.insert(position)
-                }
+                PositionsStore.upsertSelectPosition(
+                    id: voiceActing.voiceId,
+                    acting: voiceActing.translatorId,
+                    season: season?.seasonId,
+                    episode: episode?.episodeId,
+                    subtitles: language,
+                )
+                selectPositions = PositionsStore.fetchSelectPositions()
             }
         }
     }

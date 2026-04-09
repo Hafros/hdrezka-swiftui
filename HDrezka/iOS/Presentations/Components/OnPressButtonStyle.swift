@@ -9,8 +9,8 @@ struct OnPressButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .onChange(of: configuration.isPressed) {
-                onPress(configuration.isPressed)
+            .onChange(of: configuration.isPressed) { isPressed in
+                onPress(isPressed)
             }
     }
 }

@@ -1,14 +1,15 @@
 import Combine
 import FactoryKit
+import Perception
 import SwiftUI
 
-@Observable
+@Perceptible
 class WatchingLaterViewModel {
-    @ObservationIgnored @LazyInjected(\.getWatchingLaterMoviesUseCase) private var getWatchingLaterMoviesUseCase
-    @ObservationIgnored @LazyInjected(\.switchWatchedItemUseCase) private var switchWatchedItemUseCase
-    @ObservationIgnored @LazyInjected(\.removeWatchingItemUseCase) private var removeWatchingItemUseCase
+    @PerceptionIgnored @LazyInjected(\.getWatchingLaterMoviesUseCase) private var getWatchingLaterMoviesUseCase
+    @PerceptionIgnored @LazyInjected(\.switchWatchedItemUseCase) private var switchWatchedItemUseCase
+    @PerceptionIgnored @LazyInjected(\.removeWatchingItemUseCase) private var removeWatchingItemUseCase
 
-    @ObservationIgnored private var subscriptions: Set<AnyCancellable> = []
+    @PerceptionIgnored private var subscriptions: Set<AnyCancellable> = []
 
     private(set) var state: DataState<[MovieWatchLater]> = .loading
 
@@ -23,13 +24,11 @@ class WatchingLaterViewModel {
             .sink { completion in
                 guard case let .failure(error) = completion else { return }
 
-                withAnimation(.easeInOut) {
-                    self.state = .error(error)
-                }
+                // Avoid animating full-screen state transitions for large lists.
+                self.state = .error(error)
             } receiveValue: { result in
-                withAnimation(.easeInOut) {
-                    self.state = .data(result)
-                }
+                // Inserting hundreds of cards with animation is noticeably slow.
+                self.state = .data(result)
             }
             .store(in: &subscriptions)
     }

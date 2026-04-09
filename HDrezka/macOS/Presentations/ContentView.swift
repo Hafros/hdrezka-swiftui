@@ -2,6 +2,7 @@ import Alamofire
 import Combine
 import Defaults
 import FactoryKit
+import Perception
 import Pow
 import SwiftSoup
 import SwiftUI
@@ -28,167 +29,169 @@ struct ContentView: View {
     @State private var subscriptions: Set<AnyCancellable> = []
 
     var body: some View {
-        @Bindable var appState = appState
+        WithPerceptionTracking {
+            @Perception.Bindable var appState = appState
 
-        TabView(selection: $appState.selectedTab) {
-            ForEach(Tabs.allCases.filter { !$0.needAccount }) { tab in
-                Tab(value: tab) {
-                    tab
-                } label: {
-                    Label {
-                        Text(tab.label)
-                    } icon: {
-                        Image(systemName: tab.image)
+            TabView(selection: $appState.selectedTab) {
+                ForEach(Tabs.allCases.filter { !$0.needAccount }) { tab in
+                    Tab(value: tab) {
+                        tab
+                    } label: {
+                        Label {
+                            Text(tab.label)
+                        } icon: {
+                            Image(systemName: tab.image)
+                        }
                     }
                 }
-            }
 
-            if isLoggedIn {
-                TabSection {
-                    ForEach(Tabs.allCases.filter(\.needAccount)) { tab in
-                        Tab(value: tab) {
-                            tab
-                        } label: {
-                            Label {
-                                Text(tab.label)
-                            } icon: {
-                                Image(systemName: tab.image)
+                if isLoggedIn {
+                    TabSection {
+                        ForEach(Tabs.allCases.filter(\.needAccount)) { tab in
+                            Tab(value: tab) {
+                                tab
+                            } label: {
+                                Label {
+                                    Text(tab.label)
+                                } icon: {
+                                    Image(systemName: tab.image)
+                                }
                             }
                         }
+                    } header: {
+                        Text("key.library")
                     }
-                } header: {
-                    Text("key.library")
                 }
             }
-        }
-        .tabViewStyle(.sidebarAdaptable)
-        .tabViewSidebarHeader {
-            if let isUserPremium {
-                Link(destination: (!_mirror.isDefaultValue ? mirror : Const.redirectMirror).appending(path: "payments", directoryHint: .notDirectory)) {
-                    HStack(spacing: 3) {
-                        Image(.premium)
-                            .foregroundStyle(Color(red: 222.0 / 255.0, green: 21.0 / 255.0, blue: 226.0 / 255.0))
+            .tabViewStyle(.sidebarAdaptable)
+            .tabViewSidebarHeader {
+                if let isUserPremium {
+                    Link(destination: (!_mirror.isDefaultValue ? mirror : Const.redirectMirror).appending(path: "payments", directoryHint: .notDirectory)) {
+                        HStack(spacing: 3) {
+                            Image(.premium)
+                                .foregroundStyle(Color(red: 222.0 / 255.0, green: 21.0 / 255.0, blue: 226.0 / 255.0))
 
-                        Text("key.premium")
-                            .foregroundStyle(Const.premiumGradient)
+                            Text("key.premium")
+                                .foregroundStyle(Const.premiumGradient)
+                        }
+                        .conditionalEffect(
+                            .repeat(
+                                .glow(color: .init(red: 138.0 / 255.0, green: 0.0, blue: 173.0 / 255.0), radius: 10),
+                                every: 5,
+                            ),
+                            condition: isUserPremium <= 3,
+                        )
                     }
-                    .conditionalEffect(
-                        .repeat(
-                            .glow(color: .init(red: 138.0 / 255.0, green: 0.0, blue: 173.0 / 255.0), radius: 10),
-                            every: 5,
-                        ),
-                        condition: isUserPremium <= 3,
-                    )
-                }
-                .buttonStyle(.plain)
-                .onHover { hover in
-                    showDays = hover
-                }
-                .popover(isPresented: $showDays) {
-                    Text("key.days-\(isUserPremium)")
-                        .foregroundStyle(.secondary)
-                        .padding(10)
+                    .buttonStyle(.plain)
+                    .onHover { hover in
+                        showDays = hover
+                    }
+                    .popover(isPresented: $showDays) {
+                        Text("key.days-\(isUserPremium)")
+                            .foregroundStyle(.secondary)
+                            .padding(10)
+                    }
                 }
             }
-        }
-        .tabViewSidebarBottomBar {
-            Button {
-                if isLoggedIn {
-                    appState.isSignOutPresented = true
-                } else {
-                    appState.isSignInPresented = true
-                }
-            } label: {
-                HStack {
-                    Label {
-                        if isLoggedIn {
-                            Text("key.sign_out")
-                        } else {
-                            Text("key.sign_in")
-                        }
-                    } icon: {
-                        if isLoggedIn {
-                            Image(systemName: "arrow.left")
-                        } else {
-                            Image(systemName: "arrow.right")
-                        }
+            .tabViewSidebarBottomBar {
+                Button {
+                    if isLoggedIn {
+                        appState.isSignOutPresented = true
+                    } else {
+                        appState.isSignInPresented = true
                     }
-                    .labelStyle(.titleAndIcon)
-                    .foregroundStyle(.primary)
+                } label: {
+                    HStack {
+                        Label {
+                            if isLoggedIn {
+                                Text("key.sign_out")
+                            } else {
+                                Text("key.sign_in")
+                            }
+                        } icon: {
+                            if isLoggedIn {
+                                Image(systemName: "arrow.left")
+                            } else {
+                                Image(systemName: "arrow.right")
+                            }
+                        }
+                        .labelStyle(.titleAndIcon)
+                        .foregroundStyle(.primary)
 
-                    Spacer(minLength: 0)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 3)
                 }
-                .padding(.vertical, 3)
+                .buttonStyle(.accessoryBar)
+                .padding(.vertical, 5)
             }
-            .buttonStyle(.accessoryBar)
-            .padding(.vertical, 5)
-        }
-        .frame(minWidth: 1100, minHeight: 600)
-        .onAppear {
-            getVersionUseCase()
-                .receive(on: DispatchQueue.main)
-                .sink { _ in } receiveValue: { version in
-                    lastHdrezkaAppVersion = version
-                }
-                .store(in: &subscriptions)
-        }
-        .onChange(of: isLoggedIn) {
-            if !isLoggedIn, appState.selectedTab.needAccount {
-                appState.selectedTab = .home
-            }
-        }
-        .sheet(isPresented: $appState.isSignInPresented) {
-            SignInSheetView()
-        }
-        .sheet(isPresented: $appState.isSignUpPresented) {
-            SignUpSheetView()
-        }
-        .sheet(isPresented: $appState.isRestorePresented) {
-            RestoreSheetView()
-        }
-        .confirmationDialog("key.sign_out.label", isPresented: $appState.isSignOutPresented) {
-            Button(role: .destructive) {
-                logoutUseCase()
+            .frame(minWidth: 1100, minHeight: 600)
+            .onAppear {
+                getVersionUseCase()
                     .receive(on: DispatchQueue.main)
-                    .sink { completion in
-                        guard case let .failure(error) = completion else { return }
-
-                        self.error = error
-                        isErrorPresented = true
-                    } receiveValue: { success in
-                        isErrorPresented = !success
+                    .sink { _ in } receiveValue: { version in
+                        lastHdrezkaAppVersion = version
                     }
                     .store(in: &subscriptions)
-            } label: {
-                Text("key.yes")
             }
-        } message: {
-            Text("key.sign_out.q")
-        }
-        .dialogSeverity(.critical)
-        .alert("key.ops", isPresented: $isErrorPresented) {
-            Button(role: .cancel) {} label: {
-                Text("key.ok")
+            .onChange(of: isLoggedIn) {
+                if !isLoggedIn, appState.selectedTab.needAccount {
+                    appState.selectedTab = .home
+                }
             }
-        } message: {
-            if let error {
-                Text(error.localizedDescription)
+            .sheet(isPresented: $appState.isSignInPresented) {
+                SignInSheetView()
             }
-        }
-        .confirmationDialog("key.premium_content", isPresented: $appState.isPremiumPresented) {
-            Link("key.buy", destination: (!_mirror.isDefaultValue ? mirror : Const.redirectMirror).appending(path: "payments", directoryHint: .notDirectory))
-        } message: {
-            Text("key.premium.description")
-        }
-        .sheet(isPresented: $appState.commentsRulesPresented) {
-            CommentsRulesSheet()
-        }
-        .alert("key.disclaimer", isPresented: $isFirstLaunch) {
-            Button(role: .cancel) {} label: {
-                Text("key.ok")
+            .sheet(isPresented: $appState.isSignUpPresented) {
+                SignUpSheetView()
             }
-        } message: {
-            Text("key.disclaimer.description")
+            .sheet(isPresented: $appState.isRestorePresented) {
+                RestoreSheetView()
+            }
+            .confirmationDialog("key.sign_out.label", isPresented: $appState.isSignOutPresented) {
+                Button(role: .destructive) {
+                    logoutUseCase()
+                        .receive(on: DispatchQueue.main)
+                        .sink { completion in
+                            guard case let .failure(error) = completion else { return }
+
+                            self.error = error
+                            isErrorPresented = true
+                        } receiveValue: { success in
+                            isErrorPresented = !success
+                        }
+                        .store(in: &subscriptions)
+                } label: {
+                    Text("key.yes")
+                }
+            } message: {
+                Text("key.sign_out.q")
+            }
+            .dialogSeverity(.critical)
+            .alert("key.ops", isPresented: $isErrorPresented) {
+                Button(role: .cancel) {} label: {
+                    Text("key.ok")
+                }
+            } message: {
+                if let error {
+                    Text(error.localizedDescription)
+                }
+            }
+            .confirmationDialog("key.premium_content", isPresented: $appState.isPremiumPresented) {
+                Link("key.buy", destination: (!_mirror.isDefaultValue ? mirror : Const.redirectMirror).appending(path: "payments", directoryHint: .notDirectory))
+            } message: {
+                Text("key.premium.description")
+            }
+            .sheet(isPresented: $appState.commentsRulesPresented) {
+                CommentsRulesSheet()
+            }
+            .alert("key.disclaimer", isPresented: $isFirstLaunch) {
+                Button(role: .cancel) {} label: {
+                    Text("key.ok")
+                }
+            } message: {
+                Text("key.disclaimer.description")
+            }
         }
         .dialogSeverity(.critical)
         .overlay {

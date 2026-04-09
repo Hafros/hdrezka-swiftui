@@ -1,26 +1,27 @@
 import Combine
 import Defaults
 import FactoryKit
+import Perception
 import SwiftData
 import SwiftUI
 import UserNotifications
 
-@Observable
+@Perceptible
 class Downloader {
-    @ObservationIgnored static let shared = Downloader()
+    @PerceptionIgnored static let shared = Downloader()
 
-    @ObservationIgnored private var modelContext: ModelContext?
+    @PerceptionIgnored private var modelContext: ModelContext?
 
-    @ObservationIgnored private var subscriptions: Set<AnyCancellable> = []
+    @PerceptionIgnored private var subscriptions: Set<AnyCancellable> = []
 
-    @ObservationIgnored @LazyInjected(\.saveWatchingStateUseCase) private var saveWatchingStateUseCase
-    @ObservationIgnored @LazyInjected(\.getMovieVideoUseCase) private var getMovieVideoUseCase
-    @ObservationIgnored @LazyInjected(\.callUseCase) private var callUseCase
-    @ObservationIgnored @LazyInjected(\.multicallUseCase) private var multicallUseCase
+    @PerceptionIgnored @LazyInjected(\.saveWatchingStateUseCase) private var saveWatchingStateUseCase
+    @PerceptionIgnored @LazyInjected(\.getMovieVideoUseCase) private var getMovieVideoUseCase
+    @PerceptionIgnored @LazyInjected(\.callUseCase) private var callUseCase
+    @PerceptionIgnored @LazyInjected(\.multicallUseCase) private var multicallUseCase
 
-    @ObservationIgnored private let fileManager = FileManager.default
+    @PerceptionIgnored private let fileManager = FileManager.default
 
-    @ObservationIgnored private let process: Process
+    @PerceptionIgnored private let process: Process
 
     var isRunning: Bool = false
 

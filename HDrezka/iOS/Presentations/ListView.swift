@@ -1,4 +1,5 @@
 import Defaults
+import Perception
 import SwiftUI
 
 struct ListView: View {
@@ -31,123 +32,124 @@ struct ListView: View {
     private let columns = [GridItem(.adaptive(minimum: 150, maximum: .infinity), spacing: 18, alignment: .topLeading)]
 
     var body: some View {
-        ScrollView(.vertical) {
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 18) {
-                if let movies = viewModel.state.data, !movies.isEmpty {
-                    ForEach(movies) { movie in
-                        CardView(movie: movie)
+        WithPerceptionTracking {
+            ScrollView(.vertical) {
+                LazyVGrid(columns: columns, alignment: .leading, spacing: 18) {
+                    if let movies = viewModel.state.data, !movies.isEmpty {
+                        ForEach(movies) { movie in
+                            CardView(movie: movie)
+                                .onAppear {
+                                    guard viewModel.paginationState == .idle,
+                                          let last = viewModel.state.data?.last,
+                                          movie.id == last.id
+                                    else {
+                                        return
+                                    }
+
+                                    viewModel.loadMore()
+                                }
+                        }
                     }
                 }
-            }
-            .scrollTargetLayout()
-            .padding(.vertical, 18)
-            .padding(.horizontal, 36)
+                .padding(.vertical, 18)
+                .padding(.horizontal, 36)
 
-            if viewModel.paginationState == .loading {
-                LoadingPaginationStateView()
-            }
-        }
-        .scrollIndicators(.visible, axes: .vertical)
-        .onScrollTargetVisibilityChange(idType: MovieSimple.ID.self) { onScreenCards in
-            if viewModel.paginationState == .idle,
-               let movies = viewModel.state.data,
-               !movies.isEmpty,
-               let last = movies.last,
-               onScreenCards.contains(where: { $0 == last.id })
-            {
-                viewModel.loadMore()
-            }
-        }
-        .viewModifier { view in
-            if #available(iOS 26, *) {
-                view.scrollEdgeEffectStyle(.soft, for: .all)
-            } else {
-                view
-            }
-        }
-        .overlay {
-            if let error = viewModel.state.error {
-                ErrorStateView(error) {
-                    viewModel.load()
+                if viewModel.paginationState == .loading {
+                    LoadingPaginationStateView()
                 }
-                .padding(.vertical, 18)
-                .padding(.horizontal, 36)
-            } else if let movies = viewModel.state.data, movies.isEmpty {
-                EmptyStateView(String(localized: "key.nothing_found"), String(localized: "key.filter.empty")) {
-                    viewModel.load()
+            }
+            .scrollIndicators(.visible, axes: .vertical)
+            .viewModifier { view in
+                if #available(iOS 26, *) {
+                    view.scrollEdgeEffectStyle(.soft, for: .all)
+                } else {
+                    view
                 }
-                .padding(.vertical, 18)
-                .padding(.horizontal, 36)
-            } else if viewModel.state == .loading {
-                LoadingStateView()
+            }
+            .overlay {
+                if let error = viewModel.state.error {
+                    ErrorStateView(error) {
+                        viewModel.load()
+                    }
                     .padding(.vertical, 18)
                     .padding(.horizontal, 36)
-            }
-        }
-        .transition(.opacity)
-        .navigationTitle(viewModel.title)
-        .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            if !viewModel.isCustomMovies, !viewModel.isList {
-                ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        if viewModel.isGenre || viewModel.isCollection || viewModel.isCountry {
-                            Picker("key.filter.select", selection: $viewModel.filter) {
-                                ForEach(Filters.allCases) { filter in
-                                    Text(filter.rawValue).tag(filter)
-                                }
-                            }
-                            .pickerStyle(.inline)
-                        }
-
-                        if viewModel.isCategory(.newest) {
-                            Picker("key.filter.select", selection: $viewModel.newFilter) {
-                                ForEach(NewFilters.allCases) { filter in
-                                    Text(filter.rawValue).tag(filter)
-                                }
-                            }
-                            .pickerStyle(.inline)
-                        }
-
-                        if viewModel.isCategory || viewModel.isCountry {
-                            Picker("key.genre.select", selection: $viewModel.filterGenre) {
-                                ForEach(Genres.allCases.filter { $0 != .show || !viewModel.isCategory(.hot) }) { genre in
-                                    Text(genre.rawValue).tag(genre)
-                                }
-                            }
-                            .pickerStyle(.inline)
-                        }
-                    } label: {
-                        Image(systemName: "line.3.horizontal.decrease")
+                } else if let movies = viewModel.state.data, movies.isEmpty {
+                    EmptyStateView(String(localized: "key.nothing_found"), String(localized: "key.filter.empty")) {
+                        viewModel.load()
                     }
-                    .menuStyle(.button)
-                    .menuIndicator(.hidden)
-                    .disabled(viewModel.state == .loading)
+                    .padding(.vertical, 18)
+                    .padding(.horizontal, 36)
+                } else if viewModel.state == .loading {
+                    LoadingStateView()
+                        .padding(.vertical, 18)
+                        .padding(.horizontal, 36)
                 }
             }
-        }
-        .onAppear {
-            switch viewModel.state {
-            case .data:
-                break
-            default:
+            .transition(.opacity)
+            .navigationTitle(viewModel.title)
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                if !viewModel.isCustomMovies, !viewModel.isList {
+                    ToolbarItem(placement: .primaryAction) {
+                        Menu {
+                            if viewModel.isGenre || viewModel.isCollection || viewModel.isCountry {
+                                Picker("key.filter.select", selection: $viewModel.filter) {
+                                    ForEach(Filters.allCases) { filter in
+                                        Text(filter.rawValue).tag(filter)
+                                    }
+                                }
+                                .pickerStyle(.inline)
+                            }
+
+                            if viewModel.isCategory(.newest) {
+                                Picker("key.filter.select", selection: $viewModel.newFilter) {
+                                    ForEach(NewFilters.allCases) { filter in
+                                        Text(filter.rawValue).tag(filter)
+                                    }
+                                }
+                                .pickerStyle(.inline)
+                            }
+
+                            if viewModel.isCategory || viewModel.isCountry {
+                                Picker("key.genre.select", selection: $viewModel.filterGenre) {
+                                    ForEach(Genres.allCases.filter { $0 != .show || !viewModel.isCategory(.hot) }) { genre in
+                                        Text(genre.rawValue).tag(genre)
+                                    }
+                                }
+                                .pickerStyle(.inline)
+                            }
+                        } label: {
+                            Image(systemName: "line.3.horizontal.decrease")
+                        }
+                        .menuStyle(.button)
+                        .menuIndicator(.hidden)
+                        .disabled(viewModel.state == .loading)
+                    }
+                }
+            }
+            .onAppear {
+                switch viewModel.state {
+                case .data:
+                    break
+                default:
+                    viewModel.load()
+                }
+            }
+            .refreshable {
+                if viewModel.state.data?.isEmpty == false {
+                    viewModel.load()
+                }
+            }
+            .onChange(of: viewModel.filterGenre) { _ in
                 viewModel.load()
             }
-        }
-        .refreshable {
-            if viewModel.state.data?.isEmpty == false {
+            .onChange(of: viewModel.filter) { _ in
                 viewModel.load()
             }
+            .onChange(of: viewModel.newFilter) { _ in
+                viewModel.load()
+            }
+            .background(.background)
         }
-        .onChange(of: viewModel.filterGenre) {
-            viewModel.load()
-        }
-        .onChange(of: viewModel.filter) {
-            viewModel.load()
-        }
-        .onChange(of: viewModel.newFilter) {
-            viewModel.load()
-        }
-        .background(.background)
     }
 }

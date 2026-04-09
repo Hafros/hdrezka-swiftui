@@ -2,6 +2,7 @@ import Algorithms
 import Combine
 import Defaults
 import Kingfisher
+import Perception
 import Pow
 import SwiftUI
 
@@ -227,7 +228,7 @@ struct CommentsView: View {
                     CommentText(comment: comment, movieDestination: $movieDestination)
 
                     HStack(alignment: .center, spacing: 8) {
-                        @Bindable var viewModel = viewModel
+                        @Perception.Bindable var viewModel = viewModel
 
                         Button {
                             if isLoggedIn {
