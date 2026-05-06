@@ -22,6 +22,7 @@ struct WatchSheetView: View {
     @Default(.defaultQuality) private var defaultQuality
 
     private let id: String
+    @Binding private var playerData: PlayerData?
 
     @State private var details: MovieDetailed?
     @State private var seasons: [MovieSeason]?
@@ -38,8 +39,9 @@ struct WatchSheetView: View {
 
     @State private var showRating: Bool = false
 
-    init(id: String) {
+    init(id: String, playerData: Binding<PlayerData?>) {
         self.id = id
+        _playerData = playerData
     }
 
     var body: some View {
@@ -585,7 +587,8 @@ struct WatchSheetView: View {
                     dismiss()
 
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                        PlayerPresenter.present(data: data)
+                        playerData = data
+                        appState.presentedPlayerData = data
                     }
                 }
             } label: {

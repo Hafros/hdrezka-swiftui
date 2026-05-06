@@ -25,5 +25,9 @@
 	<string>+JwxXgkbVIFu9Mqop7yVjhO4d6OyLIxpV2yHLvIruYM=</string>
 	<key>SUScheduledCheckInterval</key>
 	<integer>86400</integer>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>audio</string>
+	</array>
 </dict>
 </plist>

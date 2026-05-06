@@ -21,9 +21,9 @@ extension Tabs: View {
                     .id("search")
                     .destinations()
                     .analyticsScreen(name: name, class: className)
-            case .categories:
-                CategoriesView()
-                    .id("categories")
+            case .watchingLater:
+                WatchingLaterView()
+                    .id("watching_later")
                     .destinations()
                     .analyticsScreen(name: name, class: className)
             case .collections:

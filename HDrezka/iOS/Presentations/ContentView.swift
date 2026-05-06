@@ -46,15 +46,15 @@ struct ContentView: View {
                     }
                     .tag(Tabs.search)
 
-                Tabs.categories
+                Tabs.watchingLater
                     .tabItem {
                         Label {
-                            Text(Tabs.categories.label)
+                            Text(Tabs.watchingLater.label)
                         } icon: {
-                            Image(systemName: Tabs.categories.image)
+                            Image(systemName: Tabs.watchingLater.image)
                         }
                     }
-                    .tag(Tabs.categories)
+                    .tag(Tabs.watchingLater)
 
                 Tabs.collections
                     .tabItem {
@@ -101,12 +101,16 @@ struct ContentView: View {
             }
             .fullScreenCover(item: $appState.presentedDetailsMovie) { movie in
                 DetailsView(movie: movie)
+                    .environment(appState)
             }
             .onChange(of: isLoggedIn) { _ in
                 if !isLoggedIn, appState.selectedTab == .profile {
                     appState.selectedTab = .home
                 }
             }
+//            .onChange(of: $appState.presentedPlayerData) { _, newValue in
+//                debugPrint("New Item = \(newValue)")
+//            }
             .confirmationDialog("key.sign_out.label", isPresented: $appState.isSignOutPresented) {
                 Button(role: .destructive) {
                     logoutUseCase()
@@ -152,6 +156,21 @@ struct ContentView: View {
             } message: {
                 Text("key.disclaimer.description")
             }
+            .fullScreenCover(item: $appState.presentedPlayerData, content: { data in
+                PlayerView(data: data)
+                    .analyticsScreen(name: "player", class: "PlayerView")
+            })
         }
+    }
+
+    private func isPresentedBinding(_ value: Binding<(some Any)?>) -> Binding<Bool> {
+        Binding(
+            get: { value.wrappedValue != nil },
+            set: { isPresented in
+                if !isPresented {
+                    value.wrappedValue = nil
+                }
+            },
+        )
     }
 }

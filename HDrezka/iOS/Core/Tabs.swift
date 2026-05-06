@@ -9,7 +9,7 @@ import SwiftUI
 
 enum Tabs: Hashable, Identifiable, CaseIterable {
     case home
-    case categories
+    case watchingLater
     case collections
     case profile
     case search
@@ -20,8 +20,8 @@ enum Tabs: Hashable, Identifiable, CaseIterable {
             "key.home"
         case .search:
             "key.search"
-        case .categories:
-            "key.categories"
+        case .watchingLater:
+            "key.watching_later"
         case .collections:
             "key.collections"
         case .profile:
@@ -35,8 +35,8 @@ enum Tabs: Hashable, Identifiable, CaseIterable {
             "house"
         case .search:
             "magnifyingglass"
-        case .categories:
-            "square.grid.2x2"
+        case .watchingLater:
+            "clock.arrow.circlepath"
         case .collections:
             "film.stack"
         case .profile:
@@ -60,8 +60,8 @@ enum Tabs: Hashable, Identifiable, CaseIterable {
             "home"
         case .search:
             "search"
-        case .categories:
-            "categories"
+        case .watchingLater:
+            "watching_later"
         case .collections:
             "collections"
         case .profile:
@@ -75,8 +75,8 @@ enum Tabs: Hashable, Identifiable, CaseIterable {
             "HomeView"
         case .search:
             "SearchView"
-        case .categories:
-            "CategoriesView"
+        case .watchingLater:
+            "WatchingLaterView"
         case .collections:
             "CollectionsView"
         case .profile:

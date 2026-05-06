@@ -15,6 +15,7 @@ class AppState {
 
     var isPremiumPresented = false
     var presentedDetailsMovie: MovieSimple?
+    var presentedPlayerData: PlayerData?
 
     var selectedTab: Tabs = .home
 }

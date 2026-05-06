@@ -26,6 +26,8 @@ struct DetailsView: View {
     @Default(.isLoggedIn) private var isLoggedIn
     @Default(.mirror) private var mirror
 
+    @Environment(AppState.self) private var appState
+
     @State private var topSafeAreaInset: CGFloat = .zero
 
     @State private var countryDestination: MovieCountry?
@@ -33,6 +35,7 @@ struct DetailsView: View {
     @State private var personDestination: PersonSimple?
     @State private var listDestination: MovieList?
     @State private var collectionDestination: MoviesCollection?
+    @State private var playerData: PlayerData?
 
     private var trailer: YouTubePlayer? {
         guard let trailerId = viewModel.trailerId else {
@@ -45,6 +48,12 @@ struct DetailsView: View {
     var body: some View {
         WithPerceptionTracking {
             destinationView
+//                .navigationDestination(isPresented: isPresentedBinding($playerData)) {
+//                    if let playerData {
+//                        PlayerView(data: playerData)
+//                            .analyticsScreen(name: "player", class: "PlayerView")
+//                    }
+//                }
         }
     }
 
@@ -96,6 +105,7 @@ struct DetailsView: View {
                         details: details,
                         trailer: trailer,
                         topSafeAreaInset: topSafeAreaInset,
+                        playerData: $playerData,
                         isSchedulePresented: $isSchedulePresented,
                         countryDestination: $countryDestination,
                         genreDestination: $genreDestination,
@@ -221,6 +231,7 @@ struct DetailsView: View {
         private let details: MovieDetailed
         private let trailer: YouTubePlayer?
         private let topSafeAreaInset: CGFloat
+        @Binding private var playerData: PlayerData?
         @Binding private var isSchedulePresented: Bool
 
         @Environment(\.horizontalSizeClass) private var horizontalSizeClass
@@ -236,6 +247,7 @@ struct DetailsView: View {
         init(details: MovieDetailed,
              trailer: YouTubePlayer?,
              topSafeAreaInset: CGFloat,
+             playerData: Binding<PlayerData?>,
              isSchedulePresented: Binding<Bool>,
              countryDestination: Binding<MovieCountry?>,
              genreDestination: Binding<MovieGenre?>,
@@ -246,6 +258,7 @@ struct DetailsView: View {
             self.details = details
             self.trailer = trailer
             self.topSafeAreaInset = topSafeAreaInset
+            _playerData = playerData
             _isSchedulePresented = isSchedulePresented
             _countryDestination = countryDestination
             _genreDestination = genreDestination
@@ -327,7 +340,7 @@ struct DetailsView: View {
                                         }
                                         .buttonStyle(.plain)
                                         .sheet(isPresented: $isPlayPresented) {
-                                            WatchSheetView(id: details.movieId)
+                                            WatchSheetView(id: details.movieId, playerData: $playerData)
                                         }
 
                                         //                                    if downloader.isRunning {
@@ -609,7 +622,7 @@ struct DetailsView: View {
                                     }
                                     .buttonStyle(.plain)
                                     .sheet(isPresented: $isPlayPresented) {
-                                        WatchSheetView(id: details.movieId)
+                                        WatchSheetView(id: details.movieId, playerData: $playerData)
                                     }
 
                                     //                                    if downloader.isRunning {

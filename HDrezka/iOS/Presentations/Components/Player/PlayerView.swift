@@ -8,6 +8,26 @@ import Perception
 import SwiftUI
 
 struct PlayerView: View {
+    @Default(.usePillarboxPlayerOniOS) private var usePillarboxPlayerOniOS
+
+    private let data: PlayerData
+
+    init(data: PlayerData) {
+        self.data = data
+    }
+
+    var body: some View {
+        Group {
+            if usePillarboxPlayerOniOS {
+                PillarboxPlayerView(data: data)
+            } else {
+                LegacyPlayerView(data: data)
+            }
+        }
+    }
+}
+
+struct LegacyPlayerView: View {
     @Injected(\.saveWatchingStateUseCase) private var saveWatchingStateUseCase
     @Injected(\.getMovieThumbnailsUseCase) private var getMovieThumbnailsUseCase
     @Injected(\.getMovieVideoUseCase) private var getMovieVideoUseCase
@@ -68,6 +88,11 @@ struct PlayerView: View {
     @State private var thumbnails: WebVTT?
     @State private var initialVolume: Float = .zero
     @State private var topInset: CGFloat = .zero
+
+    private func closePlayer() {
+        appState.presentedPlayerData = nil
+        dismiss()
+    }
 
     init(data: PlayerData) {
         poster = data.details.poster
@@ -147,57 +172,6 @@ struct PlayerView: View {
                                 }
                             }
                         }
-                        .gesture(
-                            SpatialTapGesture(count: 2)
-                                .onEnded { event in
-                                    guard player.status == .readyToPlay,
-                                          !isPictureInPictureActive
-                                    else {
-                                        return
-                                    }
-
-                                    if event.location.x / geometry.size.width > 0.5 {
-                                        player.seek(to: CMTime(seconds: min(currentTime + 10.0, duration), preferredTimescale: CMTimeScale(NSEC_PER_SEC)), toleranceBefore: .zero, toleranceAfter: .zero) { complete in
-                                            if isPlaying, complete {
-                                                player.playImmediately(atRate: rate)
-                                            }
-                                        }
-
-                                        currentTime = min(currentTime + 10.0, duration)
-                                    } else {
-                                        player.seek(to: CMTime(seconds: max(currentTime - 10.0, 0.0), preferredTimescale: CMTimeScale(NSEC_PER_SEC)), toleranceBefore: .zero, toleranceAfter: .zero) { complete in
-                                            if isPlaying, complete {
-                                                player.playImmediately(atRate: rate)
-                                            }
-                                        }
-
-                                        currentTime = max(currentTime - 10.0, 0.0)
-                                    }
-                                }
-                                .exclusively(before:
-                                    TapGesture(count: 1)
-                                        .onEnded {
-                                            if !isMaskShow {
-                                                setMask(!isPictureInPictureActive)
-                                            } else {
-                                                setMask((isLoading || !isPlaying) && !isPictureInPictureActive)
-                                            }
-                                        }
-                                        .exclusively(before:
-                                            DragGesture(minimumDistance: 0)
-                                                .onChanged { drag in
-                                                    if drag.startLocation.x > geometry.size.width / 2 {
-                                                        let delta = -drag.translation.height / (geometry.size.height / 2)
-
-                                                        player.volume = min(max(initialVolume + Float(delta), 0), 1)
-                                                    }
-                                                }
-                                                .onEnded { drag in
-                                                    if drag.startLocation.x > geometry.size.width / 2 {
-                                                        initialVolume = player.volume
-                                                    }
-                                                })),
-                        )
                         .overlay(alignment: .topTrailing) {
                             HStack(alignment: .center) {
                                 SliderWithoutText(value: Binding {
@@ -229,6 +203,7 @@ struct PlayerView: View {
                             .padding(.top, 36)
                             .padding(.trailing, 36)
                             .opacity(isMaskShow ? 1 : 0)
+                            .allowsHitTesting(isMaskShow)
                         }
                         .overlay(alignment: .center) {
                             HStack(alignment: .center) {
@@ -288,6 +263,7 @@ struct PlayerView: View {
                             }
                             .frame(width: 160)
                             .opacity(isMaskShow ? 1 : 0)
+                            .allowsHitTesting(isMaskShow)
                         }
                         .overlay(alignment: .bottom) {
                             VStack(alignment: .center, spacing: 8) {
@@ -471,6 +447,7 @@ struct PlayerView: View {
                             .padding(.horizontal, 36)
                             .padding(.bottom, 36)
                             .opacity(isMaskShow ? 1 : 0)
+                            .allowsHitTesting(isMaskShow)
                         }
                         .overlay(alignment: .topTrailing) {
                             if let nextTimer, let seasons, let season, let episode {
@@ -518,6 +495,9 @@ struct PlayerView: View {
                                 .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
                             }
                         }
+                        .onTapGesture(count: 1) {
+                            setMask(!isMaskShow)
+                        }
                 }
             } else if isLoading {
                 ProgressView()
@@ -527,17 +507,19 @@ struct PlayerView: View {
         .ignoresSafeArea(edges: .top)
         .overlay(alignment: .topLeading) {
             Button {
-                dismiss()
+                closePlayer()
             } label: {
                 Image(systemName: "xmark")
                     .font(.title2)
-                    .contentShape(.circle)
+                    .frame(width: 44, height: 44)
+                    .contentShape(.rect)
             }
             .buttonStyle(.plain)
             .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
             .padding(.top, 36)
             .padding(.leading, 36)
             .opacity(isMaskShow || isPictureInPictureActive || isLoading ? 1 : 0)
+            .allowsHitTesting(isMaskShow || isPictureInPictureActive || isLoading)
         }
         .background(Color.black)
         .preferredColorScheme(.dark)
@@ -1076,7 +1058,7 @@ struct PlayerView: View {
                         }
                     } receiveValue: { movie in
                         if movie.needPremium {
-                            dismiss()
+                            closePlayer()
 
                             appState.isPremiumPresented = true
                         } else {
@@ -1104,7 +1086,7 @@ struct PlayerView: View {
                         }
                     } receiveValue: { movie in
                         if movie.needPremium {
-                            dismiss()
+                            closePlayer()
 
                             appState.isPremiumPresented = true
                         } else {
@@ -1137,7 +1119,7 @@ struct PlayerView: View {
                         }
                     } receiveValue: { movie in
                         if movie.needPremium {
-                            dismiss()
+                            closePlayer()
 
                             appState.isPremiumPresented = true
                         } else {
@@ -1165,7 +1147,7 @@ struct PlayerView: View {
                         }
                     } receiveValue: { movie in
                         if movie.needPremium {
-                            dismiss()
+                            closePlayer()
 
                             appState.isPremiumPresented = true
                         } else {
