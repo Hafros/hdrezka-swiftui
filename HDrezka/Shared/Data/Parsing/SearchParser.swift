@@ -1,9 +1,10 @@
+import Defaults
 import Foundation
 import SwiftSoup
 
 class SearchParser {
     static func parseSearch(from: String) throws -> [MovieSimple] {
-        try SwiftSoup.parse(from)
+        try SwiftSoup.parse(from, Defaults[.mirror].absoluteString)
             .checker()
             .getMovies()
             .map { movie in
@@ -19,7 +20,7 @@ class SearchParser {
     }
 
     static func parseCategories(from: String) throws -> [MovieType] {
-        try SwiftSoup.parse(from)
+        try SwiftSoup.parse(from, Defaults[.mirror].absoluteString)
             .checker()
             .getTypes()
             .map { type in
@@ -60,6 +61,7 @@ private extension Element {
                     genreId: id,
                 )
             }
+            .sorted(by: { $0.name.localizedCompare($1.name) == .orderedAscending })
     }
 
     func getTypeBest() throws -> MovieBest {
@@ -78,6 +80,12 @@ private extension Element {
                     genreId: id,
                 )
             }
+            .sorted(by: {
+                guard $0.genreId.split(separator: "/").last != "best" else { return true }
+                guard $1.genreId.split(separator: "/").last != "best" else { return false }
+
+                return $0.name.localizedCompare($1.name) == .orderedAscending
+            })
 
         let years = try best.select(".select-year").first().orThrow()
             .select("option")
@@ -94,6 +102,7 @@ private extension Element {
                     return nil
                 }
             }
+            .sorted(by: { ($0.year == 0 ? 1 : 0, $0.year) > ($1.year == 0 ? 1 : 0, $1.year) })
 
         return MovieBest(
             name: name,

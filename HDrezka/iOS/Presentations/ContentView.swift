@@ -98,12 +98,16 @@ struct ContentView: View {
             Text("key.premium.description")
         }
         .sheet(isPresented: $appState.commentsRulesPresented) {
-            CommentsRulesSheet()
+            CommentsRulesSheetView()
                 .presentationSizing(.fitted)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)
         }
         .alert("key.disclaimer", isPresented: $isFirstLaunch) {
+            Link(destination: (!_mirror.isDefaultValue ? mirror : Const.redirectMirror).appending(path: "rules/", directoryHint: .notDirectory)) {
+                Text("key.site.rules")
+            }
+
             Button(role: .cancel) {} label: {
                 Text("key.ok")
             }

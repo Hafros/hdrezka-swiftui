@@ -3,7 +3,7 @@ import FactoryKit
 import FirebaseAnalytics
 import SwiftUI
 
-struct CommentReportSheet: View {
+struct CommentReportSheetView: View {
     private let comment: Comment
 
     init(comment: Comment) {

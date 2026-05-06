@@ -27,7 +27,7 @@ extension Element {
     func getCat() throws -> MovieSimple.Cat? {
         let span = try select(".b-content__inline_item-cover a .cat").first().orThrow()
 
-        let rating = try Float(span.select(".b-category-bestrating").first()?.text().trimmingCharacters(in: .decimalDigits.inverted) ?? "")
+        let rating = try Float(span.select(".b-category-bestrating").first()?.text().trimmingCharacters(in: CharacterSet.decimalDigits.inverted) ?? "")
 
         return switch try span.classNames().last.orThrow() {
         case "films":
@@ -56,9 +56,9 @@ extension Element {
             let parts = info.contains(",") ? info.components(separatedBy: ", ").filter { !$0.isEmpty } : info.components(separatedBy: "<br />").filter { !$0.isEmpty }
 
             if parts.count == 2 {
-                let season = Int(parts[0].trimmingCharacters(in: .decimalDigits.inverted))
+                let season = Int(parts[0].trimmingCharacters(in: CharacterSet.decimalDigits.inverted))
 
-                let episode = Int(parts[1].trimmingCharacters(in: .decimalDigits.inverted))
+                let episode = Int(parts[1].trimmingCharacters(in: CharacterSet.decimalDigits.inverted))
 
                 if let season, let episode {
                     return .series(season, episode)

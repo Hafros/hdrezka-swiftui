@@ -282,6 +282,28 @@
         }
       }
     },
+    "key.ambient_light" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ambient light"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Подсветка окружения"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Підсвічування оточення"
+          }
+        }
+      }
+    },
     "key.aria2.error.bencodeParseError" : {
       "localizations" : {
         "en" : {
@@ -1993,19 +2015,19 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- This program is provided **\"as is\"**.\n- The author does **not encourage any illegal activity**.\n- Use it entirely **at your own risk**."
+            "value" : "- This program is provided **\"as is\"**.\n- The author does **not encourage any illegal activity**.\n- Use it entirely **at your own risk**.\n- It is also recommended to read the **site rules**."
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- Эта программа предоставляется **«как есть»**.\n- Автор **не поощряет какую-либо незаконную деятельность**.\n- Используйте её исключительно **на свой страх и риск**."
+            "value" : "- Эта программа предоставляется **«как есть»**.\n- Автор **не поощряет какую-либо незаконную деятельность**.\n- Используйте её исключительно **на свой страх и риск**.\n- Также рекомендуется ознакомиться с **правилами сайта**."
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "- Ця програма надається **«як є»**.\n- Автор **не заохочує жодної незаконної діяльності**.\n- Використовуйте її виключно **на свій страх і ризик**."
+            "value" : "- Ця програма надається **«як є»**.\n- Автор **не заохочує жодної незаконної діяльності**.\n- Використовуйте її виключно **на свій страх і ризик**.\n- Також рекомендується ознайомитися з **правилами сайту**."
           }
         }
       }
@@ -2582,24 +2604,24 @@
         }
       }
     },
-    "key.errors.link-%@" : {
+    "key.errors.links-%@" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Link is broken (%@)"
+            "value" : "Links are broken (%@)"
           }
         },
         "ru" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Ссылка не работает (%@)"
+            "value" : "Ссылки не работают (%@)"
           }
         },
         "uk" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Посилання не працює (%@)"
+            "value" : "Посилання не працюють (%@)"
           }
         }
       }
@@ -4200,6 +4222,28 @@
         }
       }
     },
+    "key.locked" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in or buy premium to access them"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Войдите или приобретите премиум, чтобы получить к ним доступ"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Увійдіть або придбайте преміум, щоб отримати до них доступ"
+          }
+        }
+      }
+    },
     "key.login_description" : {
       "localizations" : {
         "en" : {
@@ -4636,6 +4680,28 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "ОК"
+          }
+        }
+      }
+    },
+    "key.on" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "On"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Включить"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Увімкнути"
           }
         }
       }
@@ -7104,6 +7170,28 @@
         }
       }
     },
+    "key.site.rules" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Site rules"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Правила сайта"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Правила сайту"
+          }
+        }
+      }
+    },
     "key.snow" : {
       "localizations" : {
         "en" : {
@@ -8007,6 +8095,28 @@
     },
     "Trailer unavailable" : {
 
+    },
+    "library.branch-%@" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Branch: %@"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ветка: %@"
+          }
+        },
+        "uk" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Гілка: %@"
+          }
+        }
+      }
     }
   },
   "version" : "1.1"

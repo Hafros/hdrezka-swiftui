@@ -221,7 +221,7 @@ class Downloader {
                                     }
                                 }
 
-                                if let movieUrl = movie.getClosestTo(quality: data.quality) {
+                                if let movieUrl = movie.getClosestTo(quality: data.quality)?.first {
                                     Task { [weak self] in
                                         guard let self else { return }
 
@@ -334,7 +334,7 @@ class Downloader {
                                     }
                                 }
 
-                                if let movieUrl = movie.getClosestTo(quality: data.quality) {
+                                if let movieUrl = movie.getClosestTo(quality: data.quality)?.first {
                                     Task { [weak self] in
                                         guard let self else { return }
 

@@ -2,7 +2,7 @@ import AVFoundation
 import Kingfisher
 import SwiftUI
 
-struct SliderWithText<T: BinaryFloatingPoint>: View {
+struct SliderWithTextView<T: BinaryFloatingPoint>: View {
     @Binding var value: T
     let inRange: ClosedRange<T>
     let buffers: [CMTimeRange]
@@ -18,7 +18,6 @@ struct SliderWithText<T: BinaryFloatingPoint>: View {
     @GestureState private var isActive: Bool = false
     @State private var progressDuration: T = 0
 
-    @State private var showSeekImage: Bool = false
     @State private var unitSeekImage: CGFloat = .zero
 
     init(
@@ -86,13 +85,13 @@ struct SliderWithText<T: BinaryFloatingPoint>: View {
                                 state = true
                             }
                             .onChanged { gesture in
-                                localRealProgress = max(min(T(gesture.location.x / geometry.size.width), 1), 0)
+                                localTempProgress = T(gesture.translation.width / geometry.size.width)
                                 let prg = max(min(localRealProgress + localTempProgress, 1), 0)
                                 progressDuration = inRange.upperBound * prg
                                 value = max(min(getPrgValue(), inRange.upperBound), inRange.lowerBound)
 
                                 withAnimation(.easeInOut) {
-                                    unitSeekImage = gesture.location.x / geometry.size.width
+                                    unitSeekImage = CGFloat(prg)
                                 }
                             }.onEnded { _ in
                                 localRealProgress = max(min(localRealProgress + localTempProgress, 1), 0)
@@ -100,22 +99,8 @@ struct SliderWithText<T: BinaryFloatingPoint>: View {
                                 progressDuration = inRange.upperBound * localRealProgress
                             },
                     )
-                    .onContinuousHover { phase in
-                        switch phase {
-                        case let .active(location):
-                            unitSeekImage = location.x / geometry.size.width
-
-                            withAnimation(.easeInOut) {
-                                showSeekImage = true
-                            }
-                        case .ended:
-                            withAnimation(.easeInOut) {
-                                showSeekImage = false
-                            }
-                        }
-                    }
                     .overlay {
-                        if showSeekImage || isActive, let cue = thumbnails?.cues.first(where: { TimeInterval(unitSeekImage) * TimeInterval(inRange.upperBound) > $0.timeStart && TimeInterval(unitSeekImage) * TimeInterval(inRange.upperBound) < $0.timeEnd }), let imageUrl = cue.imageUrl, let frame = cue.frame {
+                        if isActive, let cue = thumbnails?.cues.first(where: { TimeInterval(unitSeekImage) * TimeInterval(inRange.upperBound) > $0.timeStart && TimeInterval(unitSeekImage) * TimeInterval(inRange.upperBound) < $0.timeEnd }), let imageUrl = cue.imageUrl, let frame = cue.frame {
                             KFImage
                                 .url(URL(string: imageUrl))
                                 .placeholder {
@@ -171,8 +156,7 @@ struct SliderWithText<T: BinaryFloatingPoint>: View {
     private func getPrgPercentage(_ value: T) -> T {
         let range = inRange.upperBound - inRange.lowerBound
         let correctedStartValue = value - inRange.lowerBound
-        let percentage = correctedStartValue / range
-        return percentage
+        return correctedStartValue / range
     }
 
     private func getPrgValue() -> T {

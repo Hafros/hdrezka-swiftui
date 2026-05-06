@@ -95,7 +95,7 @@ struct DownloadSheetView: View {
                                                 .padding(15)
                                                 .progressViewStyle(.linear)
                                             }
-                                            .scrollIndicators(.never)
+                                            .scrollIndicators(.visible, axes: .vertical)
                                             .frame(width: 300)
                                             .frame(maxHeight: 300)
                                         }
@@ -274,21 +274,23 @@ struct DownloadSheetView: View {
                         HStack {
                             Text("key.quality")
 
-                            if let selectedQuality, let movie, let link = movie.getClosestTo(quality: selectedQuality) {
-                                ShareLink(item: link) {
-                                    Image(systemName: "square.and.arrow.up")
-                                        .foregroundStyle(.secondary)
-                                        .font(.subheadline)
+                            if let selectedQuality, let movie, let links = movie.getClosestTo(quality: selectedQuality) {
+                                ForEach(links, id: \.self) { link in
+                                    ShareLink(item: link) {
+                                        Image(systemName: "square.and.arrow.up")
+                                            .foregroundStyle(.secondary)
+                                            .font(.subheadline)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
                             }
 
                             Spacer()
 
                             Menu {
-                                if !(movie?.getLockedQualities() ?? []).isEmpty {
+                                if !(movie?.getAccountQualities() ?? []).isEmpty {
                                     Section {
-                                        ForEach(movie?.getLockedQualities() ?? [], id: \.self) { quality in
+                                        ForEach(movie?.getAccountQualities() ?? [], id: \.self) { quality in
                                             Button {
                                                 if isLoggedIn {
                                                     withAnimation(.easeInOut) {
@@ -303,6 +305,56 @@ struct DownloadSheetView: View {
                                         }
                                     } header: {
                                         Text("key.sign_in.access")
+                                    }
+
+                                    Divider()
+                                }
+
+                                if !(movie?.getPremiumQualities() ?? []).isEmpty {
+                                    Section {
+                                        ForEach(movie?.getPremiumQualities() ?? [], id: \.self) { quality in
+                                            Button {
+                                                if isUserPremium != nil {
+                                                    withAnimation(.easeInOut) {
+                                                        selectedQuality = quality
+                                                    }
+                                                } else {
+                                                    dismiss()
+
+                                                    appState.isPremiumPresented = true
+                                                }
+                                            } label: {
+                                                Text(quality)
+                                            }
+                                        }
+                                    } header: {
+                                        Text("key.premium")
+                                    }
+
+                                    Divider()
+                                }
+
+                                if !(movie?.getLockedQualities() ?? []).isEmpty {
+                                    Section {
+                                        ForEach(movie?.getLockedQualities() ?? [], id: \.self) { quality in
+                                            Button {
+                                                if isUserPremium != nil, isLoggedIn {
+                                                    withAnimation(.easeInOut) {
+                                                        selectedQuality = quality
+                                                    }
+                                                } else if isLoggedIn {
+                                                    dismiss()
+
+                                                    appState.isPremiumPresented = true
+                                                } else if isUserPremium != nil {
+                                                    isLoginPresented = true
+                                                }
+                                            } label: {
+                                                Text(quality)
+                                            }
+                                        }
+                                    } header: {
+                                        Text("key.locked")
                                     }
 
                                     Divider()
@@ -333,7 +385,7 @@ struct DownloadSheetView: View {
                             .menuStyle(.button)
                             .menuIndicator(.hidden)
                             .buttonStyle(.plain)
-                            .labelStyle(CustomLabelStyle(iconVisible: ((movie?.getAvailableQualities().count ?? 0) + (movie?.getLockedQualities().count ?? 0)) > 1))
+                            .labelStyle(CustomLabelStyle(iconVisible: ((movie?.getAvailableQualities().count ?? 0) + (movie?.getAccountQualities().count ?? 0) + (movie?.getPremiumQualities().count ?? 0) + (movie?.getLockedQualities().count ?? 0)) > 1))
                             .disabled(movie?.getAvailableQualities().isEmpty != false)
                         }
                         .padding(.horizontal, 15)
@@ -455,14 +507,14 @@ struct DownloadSheetView: View {
                             }
                         }
 
-                        if let selectedQuality, let movie, let movieURL = movie.getClosestTo(quality: selectedQuality), let selectedSubtitles, let subtitlesURL = URL(string: selectedSubtitles.link) {
+                        if let selectedQuality, let movie, let movieURL = movie.getClosestTo(quality: selectedQuality)?.first, let selectedSubtitles, let subtitlesURL = URL(string: selectedSubtitles.link) {
                             openURL(
                                 ExternalDownloaders.folx.url.appending(queryItems: [
                                     .init(name: "urls", value: "\(movieURL.absoluteString)||\(subtitlesURL.absoluteString)"),
                                     .init(name: "urlsCount", value: "2"),
                                 ]),
                             )
-                        } else if let selectedQuality, let movie, let movieURL = movie.getClosestTo(quality: selectedQuality) {
+                        } else if let selectedQuality, let movie, let movieURL = movie.getClosestTo(quality: selectedQuality)?.first {
                             openURL(
                                 ExternalDownloaders.folx.url.appending(queryItems: [
                                     .init(name: "urls", value: movieURL.absoluteString),
@@ -509,13 +561,13 @@ struct DownloadSheetView: View {
                             }
                         }
 
-                        if let selectedQuality, let movie, let movieURL = movie.getClosestTo(quality: selectedQuality), let selectedSubtitles, let subtitlesURL = URL(string: selectedSubtitles.link) {
+                        if let selectedQuality, let movie, let movieURL = movie.getClosestTo(quality: selectedQuality)?.first, let selectedSubtitles, let subtitlesURL = URL(string: selectedSubtitles.link) {
                             openURL(
                                 ExternalDownloaders.motrix.url.appending(queryItems: [
                                     .init(name: "uris", value: "\(movieURL.absoluteString)\n\(subtitlesURL.absoluteString)"),
                                 ]),
                             )
-                        } else if let selectedQuality, let movie, let movieURL = movie.getClosestTo(quality: selectedQuality) {
+                        } else if let selectedQuality, let movie, let movieURL = movie.getClosestTo(quality: selectedQuality)?.first {
                             openURL(
                                 ExternalDownloaders.motrix.url.appending(queryItems: [
                                     .init(name: "uri", value: movieURL.absoluteString),

@@ -169,7 +169,7 @@ struct LegacyPlayerView: View {
     }
 
     private func setupPlayer(seek: CMTime? = nil, isPlaying playing: Bool = true, subtitles: String? = nil) {
-        guard let url = movie.getClosestTo(quality: quality)?.hls else { return }
+        guard let url = movie.getClosestTo(quality: quality)?.first?.hls else { return }
 
         let player = CustomAVPlayer(m3u8: url, subtitles: movie.subtitles)
 
@@ -185,7 +185,7 @@ struct LegacyPlayerView: View {
                     .store(in: &playerSubscriptions)
             }
 
-            timeObserverToken = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.1, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), queue: .main) { time in
+            timeObserverToken = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.1, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), queue: DispatchQueue.main) { time in
                 let currentTime = time.seconds
 
                 self.currentTime = currentTime
@@ -217,7 +217,7 @@ struct LegacyPlayerView: View {
                 updateNextTimer()
             }
 
-            player.publisher(for: \.status)
+            player.publisher(for: \CustomAVPlayer.status)
                 .receive(on: DispatchQueue.main)
                 .sink { status in
                     switch status {
@@ -277,7 +277,7 @@ struct LegacyPlayerView: View {
                         updateNextTimer()
 
                         if let seek {
-                            player.seek(to: seek, toleranceBefore: .zero, toleranceAfter: .zero) { _ in
+                            player.seek(to: seek, toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero) { _ in
                                 if playing {
                                     player.playImmediately(atRate: rate)
                                 }
@@ -289,7 +289,7 @@ struct LegacyPlayerView: View {
                                     position.season == season?.seasonId &&
                                     position.episode == episode?.episodeId
                             }) {
-                                player.seek(to: CMTime(seconds: position.position, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), toleranceBefore: .zero, toleranceAfter: .zero) { _ in
+                                player.seek(to: CMTime(seconds: position.position, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero) { _ in
                                     if playing {
                                         player.playImmediately(atRate: rate)
                                     }
@@ -304,7 +304,7 @@ struct LegacyPlayerView: View {
                 }
                 .store(in: &playerSubscriptions)
 
-            player.publisher(for: \.timeControlStatus)
+            player.publisher(for: \CustomAVPlayer.timeControlStatus)
                 .receive(on: DispatchQueue.main)
                 .sink { status in
                     withAnimation(.easeInOut(duration: 0.15)) {
@@ -338,7 +338,7 @@ struct LegacyPlayerView: View {
                 }
                 .store(in: &playerSubscriptions)
 
-            player.publisher(for: \.isMuted)
+            player.publisher(for: \CustomAVPlayer.isMuted)
                 .receive(on: DispatchQueue.main)
                 .sink { isMuted in
                     withAnimation(.easeInOut(duration: 0.15)) {
@@ -351,7 +351,7 @@ struct LegacyPlayerView: View {
                 }
                 .store(in: &playerSubscriptions)
 
-            player.publisher(for: \.volume)
+            player.publisher(for: \CustomAVPlayer.volume)
                 .receive(on: DispatchQueue.main)
                 .sink { volume in
                     withAnimation(.easeInOut(duration: 0.15)) {
@@ -368,7 +368,7 @@ struct LegacyPlayerView: View {
                 }
                 .store(in: &playerSubscriptions)
 
-            player.publisher(for: \.error)
+            player.publisher(for: \CustomAVPlayer.error)
                 .compactMap(\.self)
                 .handleError()
                 .receive(on: DispatchQueue.main)
@@ -381,7 +381,7 @@ struct LegacyPlayerView: View {
                 }
                 .store(in: &playerSubscriptions)
 
-            currentItem.publisher(for: \.duration)
+            currentItem.publisher(for: \AVPlayerItem.duration)
                 .compactMap(\.self)
                 .filter { $0.isValid && !$0.isIndefinite && !$0.isNegativeInfinity && !$0.isPositiveInfinity && $0.seconds > 0 }
                 .receive(on: DispatchQueue.main)
@@ -394,7 +394,7 @@ struct LegacyPlayerView: View {
                 }
                 .store(in: &playerSubscriptions)
 
-            currentItem.publisher(for: \.loadedTimeRanges)
+            currentItem.publisher(for: \AVPlayerItem.loadedTimeRanges)
                 .compactMap { $0 as? [CMTimeRange] }
                 .receive(on: DispatchQueue.main)
                 .sink { loadedTimeRanges in
@@ -402,7 +402,7 @@ struct LegacyPlayerView: View {
                 }
                 .store(in: &playerSubscriptions)
 
-            currentItem.publisher(for: \.error)
+            currentItem.publisher(for: \AVPlayerItem.error)
                 .compactMap(\.self)
                 .handleError()
                 .receive(on: DispatchQueue.main)
@@ -418,7 +418,7 @@ struct LegacyPlayerView: View {
             NotificationCenter.default.publisher(for: AVPlayerItem.didPlayToEndTimeNotification, object: currentItem)
                 .receive(on: DispatchQueue.main)
                 .sink { _ in
-                    player.seek(to: CMTime(seconds: 0, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), toleranceBefore: .zero, toleranceAfter: .zero) { _ in
+                    player.seek(to: CMTime(seconds: 0, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero) { _ in
                         if isPictureInPictureActive, let pipController {
                             pipController.stopPictureInPicture()
                         } else if timer != -1, let seasons, let season, let episode {
@@ -486,7 +486,7 @@ struct LegacyPlayerView: View {
             remoteCommandCenter.changePlaybackPositionCommand.addTarget { event in
                 guard let effectiveEvent = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
 
-                player.seek(to: CMTime(seconds: effectiveEvent.positionTime, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), toleranceBefore: .zero, toleranceAfter: .zero) { success in
+                player.seek(to: CMTime(seconds: effectiveEvent.positionTime, preferredTimescale: CMTimeScale(NSEC_PER_SEC)), toleranceBefore: CMTime.zero, toleranceAfter: CMTime.zero) { success in
                     if success {
                         updateNextTimer()
                     }

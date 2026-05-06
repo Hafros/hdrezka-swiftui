@@ -125,7 +125,7 @@ struct CommentsView: View {
                     ScrollView(.vertical) {
                         CommentsViewComponent(comment: comment, movieDestination: $movieDestination)
                     }
-                    .scrollIndicators(.never)
+                    .scrollIndicators(.visible, axes: .vertical)
                     .environment(viewModel)
                 } else {
                     ProgressView()
@@ -141,7 +141,7 @@ struct CommentsView: View {
             .presentationDragIndicator(.visible)
         }
         .sheet(item: $viewModel.reportComment) { comment in
-            CommentReportSheet(comment: comment)
+            CommentReportSheetView(comment: comment)
                 .presentationSizing(.fitted)
                 .presentationDetents([.large])
                 .presentationDragIndicator(.visible)

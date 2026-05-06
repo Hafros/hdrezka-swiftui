@@ -1,5 +1,6 @@
 import Combine
 import Defaults
+import FactoryKit
 import FirebaseAnalytics
 import FirebaseCore
 import FirebaseCrashlytics
@@ -100,7 +101,9 @@ extension AppDelegate: SPUUpdaterDelegate, SPUStandardUserDriverDelegate {
         UNUserNotificationCenter.current().requestAuthorization(options: [.badge, .alert, .sound]) { _, _ in }
     }
 
-    var supportsGentleScheduledUpdateReminders: Bool { true }
+    var supportsGentleScheduledUpdateReminders: Bool {
+        true
+    }
 
     func standardUserDriverWillHandleShowingUpdate(_: Bool, forUpdate update: SUAppcastItem, state: SPUUserUpdateState) {
         if !state.userInitiated {
@@ -131,35 +134,23 @@ struct HDrezkaApp: App {
     @State private var cookiesManager: CookiesManager = .shared
     @Environment(\.openWindow) private var openWindow
 
-    @State private var modelContainer: ModelContainer
-
     @Default(.theme) private var theme
     @Default(.isFirstLaunch) private var isFirstLaunch
+    @Default(.mirror) private var mirror
+
+    @Injected(\.modelContainer) private var modelContainer
 
     init() {
-        do {
-            let schema = Schema([PlayerPosition.self, SelectPosition.self])
-            let modelContainer = try ModelContainer(for: schema)
-            modelContainer.mainContext.autosaveEnabled = true
-            self.modelContainer = modelContainer
-
-            Downloader.shared.setModelContext(modelContext: modelContainer.mainContext)
-
-            let cache = ImageCache.default
-
-            switch Defaults[.cache] {
-            case .off:
-                cache.memoryStorage.config.expiration = .expired
-                cache.diskStorage.config.expiration = .expired
-            case .memory:
-                cache.diskStorage.config.expiration = .expired
-            case .disk:
-                cache.memoryStorage.config.expiration = .expired
-            case .all:
-                break
-            }
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+        switch Defaults[.cache] {
+        case .off:
+            ImageCache.default.memoryStorage.config.expiration = .expired
+            ImageCache.default.diskStorage.config.expiration = .expired
+        case .memory:
+            ImageCache.default.diskStorage.config.expiration = .expired
+        case .disk:
+            ImageCache.default.memoryStorage.config.expiration = .expired
+        case .all:
+            break
         }
     }
 
@@ -169,9 +160,7 @@ struct HDrezkaApp: App {
                 .environment(appState)
                 .environment(downloader)
                 .environment(cookiesManager)
-                .background(WindowAccessor { window in
-                    appState.window = window
-                })
+                .background(WindowAccessor(window: $appState.window))
                 .preferredColorScheme(theme.scheme)
         }
         .modelContainer(modelContainer)
@@ -191,6 +180,7 @@ struct HDrezkaApp: App {
         .modelContainer(modelContainer)
         .defaultPosition(.center)
         .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentMinSize)
         .restorationBehavior(.disabled)
         .commands(content: customCommands)
         .commands(content: removed)
@@ -204,6 +194,7 @@ struct HDrezkaApp: App {
         }
         .defaultPosition(.center)
         .windowStyle(.hiddenTitleBar)
+        .windowResizability(.contentMinSize)
         .restorationBehavior(.disabled)
         .commands(content: customCommands)
         .commands(content: removed)
@@ -214,7 +205,7 @@ struct HDrezkaApp: App {
                 .analyticsScreen(name: "licenses", class: "LicensesView")
         }
         .defaultPosition(.center)
-        .windowResizability(.contentSize)
+        .windowResizability(.contentMinSize)
         .restorationBehavior(.disabled)
         .commands(content: customCommands)
         .commands(content: removed)
@@ -227,7 +218,7 @@ struct HDrezkaApp: App {
                 .analyticsScreen(name: "settings", class: "SettingsView")
         }
         .modelContainer(modelContainer)
-        .windowResizability(.contentSize)
+        .windowResizability(.contentMinSize)
         .defaultPosition(.center)
         .restorationBehavior(.disabled)
         .commands(content: customCommands)
@@ -245,6 +236,7 @@ struct HDrezkaApp: App {
         }
         .menuBarExtraStyle(.window)
         .restorationBehavior(.disabled)
+        .windowResizability(.contentMinSize)
         .commands(content: customCommands)
         .commands(content: removed)
     }
@@ -299,6 +291,10 @@ struct HDrezkaApp: App {
         CommandGroup(replacing: .help) {
             Link(destination: Const.github) {
                 Text("key.github")
+            }
+
+            Link(destination: (!_mirror.isDefaultValue ? mirror : Const.redirectMirror).appending(path: "rules/", directoryHint: .notDirectory)) {
+                Text("key.site.rules")
             }
 
             Button {

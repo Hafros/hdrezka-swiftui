@@ -35,12 +35,12 @@ struct ImageView: View {
             .focusEffectDisabled()
             .contentShape(.rect)
             .background(Color.clear)
-            .background(WindowAccessor { window in
-                self.window = window
-                if !window.styleMask.contains(.fullScreen) {
-                    window.toggleFullScreen(nil)
-                }
-            })
+            .background(WindowAccessor(window: $window))
+            .onChange(of: window) {
+                guard let window, !window.styleMask.contains(.fullScreen) else { return }
+
+                window.toggleFullScreen(nil)
+            }
             .onExitCommand {
                 dismiss()
             }
@@ -59,14 +59,6 @@ struct ImageView: View {
 
                 Rectangle().fill(.ultraThickMaterial)
             }
-            .overlay(alignment: .bottomTrailing) {
-                ShareLink(item: url) {
-                    Image(systemName: "square.and.arrow.up")
-                        .foregroundStyle(.primary)
-                }
-                .buttonStyle(.accessoryBar)
-                .padding(10)
-            }
             .gesture(
                 WindowDragGesture()
                     .exclusively(before:
@@ -82,5 +74,13 @@ struct ImageView: View {
                                         dismiss()
                                     })),
             )
+            .overlay(alignment: .bottomTrailing) {
+                ShareLink(item: url) {
+                    Image(systemName: "square.and.arrow.up")
+                        .foregroundStyle(.primary)
+                }
+                .buttonStyle(.accessoryBar)
+                .padding(10)
+            }
     }
 }

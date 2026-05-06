@@ -281,7 +281,7 @@ import SwiftUI
         }
 
         func makePlayerItem(startAt: Double) -> PlayerItem? {
-            guard let streamURL = movie.getClosestTo(quality: quality)?.hls else {
+            guard let streamURL = movie.getClosestTo(quality: quality)?.first?.hls else {
                 networkError = PillarboxPlayerError.unavailableStream
                 return nil
             }

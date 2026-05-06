@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct SliderWithoutText<T: BinaryFloatingPoint>: View {
+struct SliderWithoutTextView<T: BinaryFloatingPoint>: View {
     @Binding var value: T
     let inRange: ClosedRange<T>
     let activeFillColor: Color
@@ -52,7 +52,7 @@ struct SliderWithoutText<T: BinaryFloatingPoint>: View {
                             state = true
                         }
                         .onChanged { gesture in
-                            localRealProgress = max(min(T(gesture.location.x / geometry.size.width), 1), 0)
+                            localTempProgress = T(gesture.translation.width / geometry.size.width)
                             value = max(min(getPrgValue(), inRange.upperBound), inRange.lowerBound)
                         }.onEnded { _ in
                             localRealProgress = max(min(localRealProgress + localTempProgress, 1), 0)
@@ -79,8 +79,7 @@ struct SliderWithoutText<T: BinaryFloatingPoint>: View {
     private func getPrgPercentage(_ value: T) -> T {
         let range = inRange.upperBound - inRange.lowerBound
         let correctedStartValue = value - inRange.lowerBound
-        let percentage = correctedStartValue / range
-        return percentage
+        return correctedStartValue / range
     }
 
     private func getPrgValue() -> T {

@@ -145,6 +145,7 @@ struct BookmarksSheetView: View {
                                             value: bookmark.count,
                                         )
                                         .disabled(id.id == nil)
+                                        .flexibility(.natural)
                                     }
                                 }
                             }
@@ -157,7 +158,7 @@ struct BookmarksSheetView: View {
                                 }
                             }
                         }
-                        .scrollIndicators(.never)
+                        .scrollIndicators(.visible, axes: .vertical)
                         .frame(maxWidth: .infinity)
                         .frame(height: scrollViewContentSize.height > 140 ? 140 : scrollViewContentSize.height)
                         .background(.quinary, in: .rect(cornerRadius: 6))

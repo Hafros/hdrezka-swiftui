@@ -1,5 +1,6 @@
 import Combine
 import Defaults
+import FactoryKit
 import FirebaseAnalytics
 import FirebaseCore
 import FirebaseCrashlytics
@@ -80,35 +81,23 @@ struct HDrezkaApp: App {
     @State private var downloader: Downloader = .shared
     @State private var cookiesManager: CookiesManager = .shared
 
-    @State private var modelContainer: ModelContainer
-
     @Default(.theme) private var theme
     @Default(.isFirstLaunch) private var isFirstLaunch
+    @Default(.mirror) private var mirror
+
+    @Injected(\.modelContainer) private var modelContainer
 
     init() {
-        do {
-            let schema = Schema([PlayerPosition.self, SelectPosition.self])
-            let modelContainer = try ModelContainer(for: schema)
-            modelContainer.mainContext.autosaveEnabled = true
-            self.modelContainer = modelContainer
-
-            Downloader.shared.setModelContext(modelContext: modelContainer.mainContext)
-
-            let cache = ImageCache.default
-
-            switch Defaults[.cache] {
-            case .off:
-                cache.memoryStorage.config.expiration = .expired
-                cache.diskStorage.config.expiration = .expired
-            case .memory:
-                cache.diskStorage.config.expiration = .expired
-            case .disk:
-                cache.memoryStorage.config.expiration = .expired
-            case .all:
-                break
-            }
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+        switch Defaults[.cache] {
+        case .off:
+            ImageCache.default.memoryStorage.config.expiration = .expired
+            ImageCache.default.diskStorage.config.expiration = .expired
+        case .memory:
+            ImageCache.default.diskStorage.config.expiration = .expired
+        case .disk:
+            ImageCache.default.memoryStorage.config.expiration = .expired
+        case .all:
+            break
         }
     }
 
@@ -130,6 +119,10 @@ struct HDrezkaApp: App {
         CommandGroup(replacing: .help) {
             Link(destination: Const.github) {
                 Text("key.github")
+            }
+
+            Link(destination: (!_mirror.isDefaultValue ? mirror : Const.redirectMirror).appending(path: "rules/", directoryHint: .notDirectory)) {
+                Text("key.site.rules")
             }
 
             Button {

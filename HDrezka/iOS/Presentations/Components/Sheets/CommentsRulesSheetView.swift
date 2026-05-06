@@ -2,7 +2,7 @@ import Defaults
 import FirebaseAnalytics
 import SwiftUI
 
-struct CommentsRulesSheet: View {
+struct CommentsRulesSheetView: View {
     @Environment(\.dismiss) private var dismiss
 
     @Environment(CookiesManager.self) private var cookiesManager
@@ -113,7 +113,7 @@ struct CommentsRulesSheet: View {
                 .padding(10)
                 .frame(maxWidth: .infinity)
             }
-            .scrollIndicators(.never)
+            .scrollIndicators(.visible, axes: .vertical)
             .frame(maxWidth: .infinity)
             .frame(height: 200)
             .background(.quinary, in: .rect(cornerRadius: 6))

@@ -7,7 +7,7 @@ import SwiftUI
 
 class MovieDetailsParser {
     static func parseMovieDetails(from: String, movieId: String) throws -> MovieDetailed {
-        let site = try SwiftSoup.parse(from).checker()
+        let site = try SwiftSoup.parse(from, Defaults[.mirror].absoluteString).checker()
         let content = try site.getDetailsContent()
 
         let nameRussian = try content.getDetailsRussianName()
@@ -88,7 +88,7 @@ class MovieDetailsParser {
             case "Жанр":
                 genres = try chunk.last().orThrow().getDetailsGenres()
             case "Время":
-                duration = try Int(chunk.last().orThrow().text().trimmingCharacters(in: .decimalDigits.inverted))
+                duration = try Int(chunk.last().orThrow().text().trimmingCharacters(in: CharacterSet.decimalDigits.inverted))
             case "Входит в списки":
                 lists = try chunk.last().orThrow().getDetailsMovieLists()
             case "Из серии":
@@ -142,7 +142,7 @@ class MovieDetailsParser {
     }
 
     static func parseBookmarks(from: String) throws -> [Bookmark] {
-        try SwiftSoup.parse(from).checker().getBookmarks()
+        try SwiftSoup.parse(from, Defaults[.mirror].absoluteString).checker().getBookmarks()
     }
 
     static func parseTrailerId(from: String) throws -> String {
@@ -154,18 +154,18 @@ class MovieDetailsParser {
     }
 
     static func parseSeriesSeasons(from: String) throws -> [MovieSeason] {
-        if let seasons = try? SwiftSoup.parse(from).getSeasons() {
+        if let seasons = try? SwiftSoup.parse(from, Defaults[.mirror].absoluteString).getSeasons() {
             return seasons
         } else {
             guard let json = try? JSONSerialization.jsonObject(with: from.data(using: .utf8).orThrow(), options: .allowFragments) as? [String: Any] else {
                 throw HDrezkaError.parseJson("json", "parseSeriesSeasons")
             }
 
-            guard let seasonsString = json["seasons"] as? String, let seasons = try SwiftSoup.parse(seasonsString).body() else {
+            guard let seasonsString = json["seasons"] as? String, let seasons = try SwiftSoup.parse(seasonsString, Defaults[.mirror].absoluteString).body() else {
                 throw HDrezkaError.parseJson("seasons", "parseSeriesSeasons")
             }
 
-            guard let episodeString = json["episodes"] as? String, let episodes = try SwiftSoup.parse(episodeString).body() else {
+            guard let episodeString = json["episodes"] as? String, let episodes = try SwiftSoup.parse(episodeString, Defaults[.mirror].absoluteString).body() else {
                 throw HDrezkaError.parseJson("episodes", "parseSeriesSeasons")
             }
 
@@ -179,7 +179,7 @@ class MovieDetailsParser {
                         .map { episode in
                             try MovieEpisode(
                                 episodeId: episode.attr("data-episode_id"),
-                                name: episode.text().trimmingCharacters(in: .decimalDigits.inverted).isEmpty ? episode.text() : episode.text().trimmingCharacters(in: .decimalDigits.inverted),
+                                name: episode.text().trimmingCharacters(in: CharacterSet.decimalDigits.inverted).isEmpty ? episode.text() : episode.text().trimmingCharacters(in: CharacterSet.decimalDigits.inverted),
                                 isSelected: episode.hasClass("active"),
                                 url: episode.attr("href").cleanPath,
                             )
@@ -187,7 +187,7 @@ class MovieDetailsParser {
 
                     return try MovieSeason(
                         seasonId: seasonId,
-                        name: season.text().trimmingCharacters(in: .decimalDigits.inverted).isEmpty ? season.text() : season.text().trimmingCharacters(in: .decimalDigits.inverted),
+                        name: season.text().trimmingCharacters(in: CharacterSet.decimalDigits.inverted).isEmpty ? season.text() : season.text().trimmingCharacters(in: CharacterSet.decimalDigits.inverted),
                         episodes: seasonEpisodes,
                         isSelected: season.hasClass("active"),
                         url: season.attr("href").cleanPath,
@@ -205,11 +205,11 @@ class MovieDetailsParser {
             return []
         }
 
-        return try SwiftSoup.parse(html).getComments()
+        return try SwiftSoup.parse(html, Defaults[.mirror].absoluteString).getComments()
     }
 
     static func parseLikes(from: String) throws -> [Like] {
-        try SwiftSoup.parse(from).getLikes()
+        try SwiftSoup.parse(from, Defaults[.mirror].absoluteString).getLikes()
     }
 }
 
@@ -483,12 +483,12 @@ private extension Element {
             .components(separatedBy: "<br />")
             .filter { !$0.isEmpty }
             .map {
-                let listItem = try SwiftSoup.parse($0).body().orThrow()
+                let listItem = try SwiftSoup.parse($0, Defaults[.mirror].absoluteString).body().orThrow()
 
                 return try MovieList(
                     name: listItem.select("a").first().orThrow().text(),
                     listId: listItem.select("a").first().orThrow().attr("href").cleanPath.orThrow(),
-                    moviePosition: Int(listItem.text().substringAfterLast("(").trimmingCharacters(in: .decimalDigits.inverted)).orThrow(),
+                    moviePosition: Int(listItem.text().substringAfterLast("(").trimmingCharacters(in: CharacterSet.decimalDigits.inverted)).orThrow(),
                 )
             }
     }
@@ -566,13 +566,13 @@ private extension Document {
             return nil
         }
 
-        let items = try SwiftSoup.parse(Parser.unescapeEntities(popup.attr("title"), false)).body().orThrow().select(".inner")
+        let items = try SwiftSoup.parse(Parser.unescapeEntities(popup.attr("title"), false), Defaults[.mirror].absoluteString).body().orThrow().select(".inner")
 
         return try items.map {
             try MovieVoiceActingRating(
                 name: $0.select(".title").text().addFlag($0.select("img").attr("src")),
                 percent: Float($0.select(".count").text()
-                    .trimmingCharacters(in: .decimalDigits.inverted)
+                    .trimmingCharacters(in: CharacterSet.decimalDigits.inverted)
                     .replacingOccurrences(of: ",", with: ".")).orThrow(),
             )
         }
@@ -603,7 +603,7 @@ private extension Document {
                 .map { episode in
                     try MovieEpisode(
                         episodeId: episode.attr("data-episode_id"),
-                        name: episode.text().trimmingCharacters(in: .decimalDigits.inverted).isEmpty ? episode.text() : episode.text().trimmingCharacters(in: .decimalDigits.inverted),
+                        name: episode.text().trimmingCharacters(in: CharacterSet.decimalDigits.inverted).isEmpty ? episode.text() : episode.text().trimmingCharacters(in: CharacterSet.decimalDigits.inverted),
                         isSelected: episode.hasClass("active"),
                         url: episode.attr("href").cleanPath,
                     )
@@ -612,7 +612,7 @@ private extension Document {
             return [
                 MovieSeason(
                     seasonId: id,
-                    name: id.trimmingCharacters(in: .decimalDigits.inverted),
+                    name: id.trimmingCharacters(in: CharacterSet.decimalDigits.inverted),
                     episodes: episodes,
                     isSelected: true,
                     url: nil,
@@ -626,7 +626,7 @@ private extension Document {
                     .map { episode in
                         try MovieEpisode(
                             episodeId: episode.attr("data-episode_id"),
-                            name: episode.text().trimmingCharacters(in: .decimalDigits.inverted).isEmpty ? episode.text() : episode.text().trimmingCharacters(in: .decimalDigits.inverted),
+                            name: episode.text().trimmingCharacters(in: CharacterSet.decimalDigits.inverted).isEmpty ? episode.text() : episode.text().trimmingCharacters(in: CharacterSet.decimalDigits.inverted),
                             isSelected: episode.hasClass("active"),
                             url: episode.attr("href").cleanPath,
                         )
@@ -634,7 +634,7 @@ private extension Document {
 
                 return try MovieSeason(
                     seasonId: id,
-                    name: season.text().trimmingCharacters(in: .decimalDigits.inverted).isEmpty ? season.text() : season.text().trimmingCharacters(in: .decimalDigits.inverted),
+                    name: season.text().trimmingCharacters(in: CharacterSet.decimalDigits.inverted).isEmpty ? season.text() : season.text().trimmingCharacters(in: CharacterSet.decimalDigits.inverted),
                     episodes: episodes,
                     isSelected: season.hasClass("active"),
                     url: season.attr("href").cleanPath,
@@ -730,7 +730,7 @@ private extension Document {
             .map { item in
                 let name = try item.select(".td.title").text()
                 let id = try item.attr("data-url").cleanPath
-                let year = try item.select(".td.year").text().trimmingCharacters(in: .decimalDigits.inverted)
+                let year = try item.select(".td.year").text().trimmingCharacters(in: CharacterSet.decimalDigits.inverted)
                 let rating = try Float(item.select(".td.rating").text())
                 let current = item.hasClass("current")
                 let position = try Int(item.select(".td.num").text()).orThrow()
@@ -758,13 +758,11 @@ private extension String {
             throw HDrezkaError.parseJson("code", "getTrailerLink")
         }
 
-        let trailerId = try SwiftSoup.parse(code)
+        return try SwiftSoup.parse(code, Defaults[.mirror].absoluteString)
             .select("iframe").first().orThrow()
             .attr("src")
             .substringAfter("https://www.youtube.com/embed/")
             .substringBefore("?")
-
-        return trailerId
     }
 
     func getMovieVideo() throws -> MovieVideo {
@@ -785,22 +783,17 @@ private extension String {
 
         let streams = decrypt(encrypted: url)
 
-        let videoMap = try streams.components(separatedBy: ",").filter { !$0.isEmpty }.reduce(into: OrderedDictionary<String, URL?>()) { videoMap, stream in
-            let name = try SwiftSoup.parse(stream.substringAfter("[").substringBefore("]")).text()
+        let videos = try streams.components(separatedBy: ",").filter { !$0.isEmpty }.map { stream in
+            let nameElement = try SwiftSoup.parse(stream.substringAfter("[").substringBefore("]"), Defaults[.mirror].absoluteString)
+            let name = try nameElement.text()
             let videos = stream.substringAfter("]").components(separatedBy: " or ").filter { !$0.isEmpty }
-            let link = videos.first?.substringBeforeLast(".mp4", includeSeparator: true)
+            let links = videos.map { $0.substringBeforeLast(".mp4", includeSeparator: true) }.uniqued().filter { $0 != "null" }.compactMap { URL(string: $0) }
 
-            let url: URL? = if let link, !link.isEmpty, link != "null" {
-                URL(string: link)
-            } else {
-                nil
+            if links.contains(where: { $0.pathExtension != "mp4" || $0.isFileURL }) {
+                throw HDrezkaError.skipLinks(links)
             }
 
-            if let url, url.pathExtension != "mp4" || url.isFileURL {
-                throw HDrezkaError.skipLink(url)
-            }
-
-            videoMap[name] = url
+            return try MovieVideo.Video(quality: name, urls: links, needAccount: links.isEmpty, needPremium: !nameElement.select("img").isEmpty())
         }
 
         let subtitles: [MovieSubtitles] = if let subtitles = (jsonObject["subtitle"] as? String), let subtitlesLns = (jsonObject["subtitle_lns"] as? [String: Any]) {
@@ -824,7 +817,7 @@ private extension String {
         }
 
         return MovieVideo(
-            videoMap: videoMap,
+            videos: videos,
             subtitles: subtitles,
             needPremium: (jsonObject["premium_content"] as? Int ?? 0) == 1,
             thumbnails: jsonObject["thumbnails"] as? String,

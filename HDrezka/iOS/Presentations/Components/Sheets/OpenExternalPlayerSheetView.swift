@@ -94,7 +94,7 @@ struct OpenExternalPlayerSheetView: View {
                                                 .padding(15)
                                                 .progressViewStyle(.linear)
                                             }
-                                            .scrollIndicators(.never)
+                                            .scrollIndicators(.visible, axes: .vertical)
                                             .frame(width: 300)
                                             .frame(maxHeight: 300)
                                         }
@@ -273,21 +273,23 @@ struct OpenExternalPlayerSheetView: View {
                         HStack {
                             Text("key.quality")
 
-                            if let selectedQuality, let movie, let link = movie.getClosestTo(quality: selectedQuality) {
-                                ShareLink(item: link) {
-                                    Image(systemName: "square.and.arrow.up")
-                                        .foregroundStyle(.secondary)
-                                        .font(.subheadline)
+                            if let selectedQuality, let movie, let links = movie.getClosestTo(quality: selectedQuality) {
+                                ForEach(links, id: \.self) { link in
+                                    ShareLink(item: link) {
+                                        Image(systemName: "square.and.arrow.up")
+                                            .foregroundStyle(.secondary)
+                                            .font(.subheadline)
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .buttonStyle(.plain)
                             }
 
                             Spacer()
 
                             Menu {
-                                if !(movie?.getLockedQualities() ?? []).isEmpty {
+                                if !(movie?.getAccountQualities() ?? []).isEmpty {
                                     Section {
-                                        ForEach(movie?.getLockedQualities() ?? [], id: \.self) { quality in
+                                        ForEach(movie?.getAccountQualities() ?? [], id: \.self) { quality in
                                             Button {
                                                 if isLoggedIn {
                                                     withAnimation(.easeInOut) {
@@ -302,6 +304,56 @@ struct OpenExternalPlayerSheetView: View {
                                         }
                                     } header: {
                                         Text("key.sign_in.access")
+                                    }
+
+                                    Divider()
+                                }
+
+                                if !(movie?.getPremiumQualities() ?? []).isEmpty {
+                                    Section {
+                                        ForEach(movie?.getPremiumQualities() ?? [], id: \.self) { quality in
+                                            Button {
+                                                if isUserPremium != nil {
+                                                    withAnimation(.easeInOut) {
+                                                        selectedQuality = quality
+                                                    }
+                                                } else {
+                                                    dismiss()
+
+                                                    appState.isPremiumPresented = true
+                                                }
+                                            } label: {
+                                                Text(quality)
+                                            }
+                                        }
+                                    } header: {
+                                        Text("key.premium")
+                                    }
+
+                                    Divider()
+                                }
+
+                                if !(movie?.getLockedQualities() ?? []).isEmpty {
+                                    Section {
+                                        ForEach(movie?.getLockedQualities() ?? [], id: \.self) { quality in
+                                            Button {
+                                                if isUserPremium != nil, isLoggedIn {
+                                                    withAnimation(.easeInOut) {
+                                                        selectedQuality = quality
+                                                    }
+                                                } else if isLoggedIn {
+                                                    dismiss()
+
+                                                    appState.isPremiumPresented = true
+                                                } else if isUserPremium != nil {
+                                                    isLoginPresented = true
+                                                }
+                                            } label: {
+                                                Text(quality)
+                                            }
+                                        }
+                                    } header: {
+                                        Text("key.locked")
                                     }
 
                                     Divider()
@@ -332,7 +384,7 @@ struct OpenExternalPlayerSheetView: View {
                             .menuStyle(.button)
                             .menuIndicator(.hidden)
                             .buttonStyle(.plain)
-                            .labelStyle(CustomLabelStyle(iconVisible: ((movie?.getAvailableQualities().count ?? 0) + (movie?.getLockedQualities().count ?? 0)) > 1))
+                            .labelStyle(CustomLabelStyle(iconVisible: ((movie?.getAvailableQualities().count ?? 0) + (movie?.getAccountQualities().count ?? 0) + (movie?.getPremiumQualities().count ?? 0) + (movie?.getLockedQualities().count ?? 0)) > 1))
                             .disabled(movie?.getAvailableQualities().isEmpty != false)
                         }
                         .padding(.horizontal, 15)
@@ -439,14 +491,14 @@ struct OpenExternalPlayerSheetView: View {
                                 }
                             }
 
-                            if let movie, let selectedQuality, let movieURL = movie.getClosestTo(quality: selectedQuality), let selectedSubtitles, let subtitlesURL = URL(string: selectedSubtitles.link) {
+                            if let movie, let selectedQuality, let movieURL = movie.getClosestTo(quality: selectedQuality)?.first, let selectedSubtitles, let subtitlesURL = URL(string: selectedSubtitles.link) {
                                 openURL(
                                     ExternalPlayers.infuse.url.appending(queryItems: [
                                         .init(name: "url", value: movieURL.absoluteString),
                                         .init(name: "sub", value: subtitlesURL.absoluteString),
                                     ]),
                                 )
-                            } else if let movie, let selectedQuality, let movieURL = movie.getClosestTo(quality: selectedQuality) {
+                            } else if let movie, let selectedQuality, let movieURL = movie.getClosestTo(quality: selectedQuality)?.first {
                                 openURL(
                                     ExternalPlayers.infuse.url.appending(queryItems: [
                                         .init(name: "url", value: movieURL.absoluteString),

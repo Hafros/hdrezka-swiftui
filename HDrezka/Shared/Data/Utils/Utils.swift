@@ -26,9 +26,13 @@ extension Document {
 }
 
 extension String {
-    var id: String? { URL(string: self)?.id }
+    var id: String? {
+        URL(string: self)?.id
+    }
 
-    var cleanPath: String? { URL(string: self)?.cleanPath }
+    var cleanPath: String? {
+        URL(string: self)?.cleanPath
+    }
 
     var isNumber: Bool {
         CharacterSet.decimalDigits.isSuperset(of: CharacterSet(charactersIn: self))
@@ -74,10 +78,6 @@ extension String {
         } else {
             return "0"
         }
-    }
-
-    func isNotEqualAndNotEmpty(_ str: String) -> Bool {
-        self != str && !isEmpty
     }
 
     func page(_ page: Int) -> String {

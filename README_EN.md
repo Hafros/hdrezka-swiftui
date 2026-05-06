@@ -5,6 +5,7 @@
    <li>This program is provided <b>"as is"</b>.</li>
    <li>The author does <b>not encourage any illegal activity</b>.</li>
    <li>Use it entirely <b>at your own risk</b>.</li>
+   <li>It is also recommended to read the <a href="https://rezka.ag/rules/"><b>site rules</b></a>.</li>
 </ul>
 <h2>✨ Features</h2>
 <ul>
@@ -23,11 +24,11 @@
 <ul>
     <li>
         <span>💻</span>
-        <a href="https://voidboost.github.io/hdrezka-releases/HDrezka 1.0.32.dmg" target="_blank">Download latest version (macOS 15 Sequoia or newer)</a>
+        <a href="https://voidboost.github.io/hdrezka-releases/HDrezka 1.0.36.dmg" target="_blank">Download latest version (macOS 15 Sequoia or newer)</a>
     </li>
     <li>
         <span>📱</span>
-        <a href="https://voidboost.github.io/hdrezka-releases/HDrezka 1.0.32.ipa" target="_blank">Download latest version (iPadOS 18 or newer)</a>
+        <a href="https://voidboost.github.io/hdrezka-releases/HDrezka 1.0.36.ipa" target="_blank">Download latest version (iPadOS 18 or newer)</a>
         <sup>beta</sup>
     </li>
 </ul>
