@@ -178,6 +178,7 @@
 				macOS/Utils/NSImage.swift = (macos, );
 				macOS/Utils/RemoveBackgroundImageProcessor.swift = (macos, );
 				macOS/Utils/WindowAccessor.swift = (macos, );
+				macOS/ViewModels/PlayerViewModel.swift = (macos, );
 				tvOS/ContentView.swift = (tvos, );
 				"tvOS/Core/Destinations+View.swift" = (tvos, );
 				tvOS/Core/Downloader.swift = (tvos, );
@@ -210,7 +211,6 @@
 				tvOS/Presentations/SearchView.swift = (tvos, );
 				tvOS/Presentations/SignInView.swift = (tvos, );
 				tvOS/Presentations/WatchingLaterView.swift = (tvos, );
-				macOS/ViewModels/PlayerViewModel.swift = (macos, );
 			};
 			target = 04B3CA732BA06C9C0039F76E /* HDrezka */;
 		};
@@ -588,7 +588,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 38;
+				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_ASSET_PATHS = "";
@@ -631,7 +631,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.37;
+				MARKETING_VERSION = 1.0.38;
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.hdrezka.underground;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -665,7 +665,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "-";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 38;
+				CURRENT_PROJECT_VERSION = 1;
 				DEAD_CODE_STRIPPING = YES;
 				DEVELOPMENT_ASSET_PATHS = "";
 				DEVELOPMENT_TEAM = EUMXSZ6Z6R;
@@ -708,7 +708,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.0;
-				MARKETING_VERSION = 1.0.37;
+				MARKETING_VERSION = 1.0.38;
 				OTHER_LDFLAGS = "-ObjC";
 				PRODUCT_BUNDLE_IDENTIFIER = com.hdrezka.underground;
 				PRODUCT_NAME = "$(TARGET_NAME)";

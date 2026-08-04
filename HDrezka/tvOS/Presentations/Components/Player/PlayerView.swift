@@ -169,9 +169,10 @@ struct LegacyPlayerView: View {
     }
 
     private func setupPlayer(seek: CMTime? = nil, isPlaying playing: Bool = true, subtitles: String? = nil) {
-        guard let url = movie.getClosestTo(quality: quality)?.first?.hls else { return }
+        guard let urls = movie.getFallbackURLs(startingAt: quality)?.compactMap(\.hls), !urls.isEmpty else { return }
+        let assetURL = urls[0]
 
-        let player = CustomAVPlayer(m3u8: url, subtitles: movie.subtitles)
+        let player = CustomAVPlayer(urls: urls, subtitles: movie.subtitles)
 
         if let player, let currentItem = player.currentItem {
             nowPlayingInfoCenter.nowPlayingInfo = [:]
@@ -443,7 +444,7 @@ struct LegacyPlayerView: View {
                 }
                 .store(in: &playerSubscriptions)
 
-            nowPlayingInfoCenter.nowPlayingInfo?[MPNowPlayingInfoPropertyAssetURL] = url
+            nowPlayingInfoCenter.nowPlayingInfo?[MPNowPlayingInfoPropertyAssetURL] = assetURL
             nowPlayingInfoCenter.nowPlayingInfo?[MPNowPlayingInfoPropertyMediaType] = MPNowPlayingInfoMediaType.video.rawValue
             nowPlayingInfoCenter.nowPlayingInfo?[MPNowPlayingInfoPropertyIsLiveStream] = false
             nowPlayingInfoCenter.nowPlayingInfo?[MPMediaItemPropertyTitle] = name

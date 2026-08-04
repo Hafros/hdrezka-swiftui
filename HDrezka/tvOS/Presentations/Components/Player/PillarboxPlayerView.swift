@@ -1,3 +1,4 @@
+import Alamofire
 import AVFoundation
 import Combine
 import Defaults
@@ -36,6 +37,7 @@ import SwiftUI
         @State private var isLoading = false
         @State private var networkError: Error?
         @State private var lastPlaybackTime: Double = .zero
+        @State private var manifestRefreshAttempts = 0
         @State private var subscriptions: Set<AnyCancellable> = []
         @State private var resourceLoader: PillarboxResourceLoaderDelegate?
 
@@ -85,9 +87,11 @@ import SwiftUI
             }
             .background(.black)
             .onAppear {
+                PlayerDiagnostics.log("view appeared")
                 startInitialPlayback()
             }
             .onDisappear {
+                PlayerDiagnostics.log("view disappeared")
                 teardownPlayer()
             }
             .onReceive(player.periodicTimePublisher(forInterval: .init(value: 1, timescale: 1))) { time in
@@ -108,6 +112,10 @@ import SwiftUI
 
     private extension PillarboxPlayerView {
         func handlePlaybackStateChange(_ playbackState: PlaybackState) {
+            PlayerDiagnostics.log(
+                "playback state changed: state=\(playbackState), shouldPlay=\(player.shouldPlay), items=\(player.items.count), time=\(PlayerDiagnostics.secondsDescription(currentResumeTime())), error=\(PlayerDiagnostics.errorDescription(activeError))",
+            )
+
             guard playbackState == .ended else { return }
             guard nextEpisodeSelection() != nil else { return }
 
@@ -137,6 +145,7 @@ import SwiftUI
                 let subtitleLanguage = currentSubtitleLanguage()
 
                 quality = newQuality
+                manifestRefreshAttempts = 0
                 loadCurrentItem(
                     startAt: resumeTime,
                     autoplay: autoplay,
@@ -230,7 +239,14 @@ import SwiftUI
         func startInitialPlayback(force: Bool = false) {
             guard force || !isStarted else { return }
 
+            PlayerDiagnostics.log(
+                "start initial playback: force=\(force), quality=\(quality), storedPosition=\(PlayerDiagnostics.secondsDescription(storedPlaybackPosition(for: season, episode))), subtitle=\(storedSubtitleLanguage() ?? "automatic")",
+            )
+
             isStarted = true
+            if force {
+                manifestRefreshAttempts = 0
+            }
             player.actionAtItemEnd = .pause
             player.playbackSpeed = rate
 
@@ -242,6 +258,10 @@ import SwiftUI
         }
 
         func teardownPlayer() {
+            PlayerDiagnostics.log(
+                "teardown player: time=\(PlayerDiagnostics.secondsDescription(currentResumeTime())), selectedSubtitle=\(currentSubtitleLanguage() ?? "automatic"), playbackSpeed=\(player.playbackSpeed)",
+            )
+
             savePlaybackPosition(currentResumeTime(), for: season, episode)
             saveSelectionState(subtitlesLanguage: currentSubtitleLanguage())
 
@@ -255,6 +275,10 @@ import SwiftUI
         }
 
         func loadCurrentItem(startAt: Double, autoplay: Bool, preferredSubtitleLanguage: String?) {
+            PlayerDiagnostics.log(
+                "load item requested: quality=\(quality), startAt=\(PlayerDiagnostics.secondsDescription(startAt)), autoplay=\(autoplay), preferredSubtitle=\(preferredSubtitleLanguage ?? "automatic")",
+            )
+
             guard let item = makePlayerItem(startAt: startAt) else { return }
 
             isLoading = false
@@ -278,13 +302,25 @@ import SwiftUI
             } else {
                 player.pause()
             }
+
+            PlayerDiagnostics.log(
+                "load item finished: autoplay=\(autoplay), playbackSpeed=\(player.playbackSpeed), items=\(player.items.count)",
+            )
         }
 
         func makePlayerItem(startAt: Double) -> PlayerItem? {
-            guard let streamURL = movie.getClosestTo(quality: quality)?.first?.hls else {
+            guard let streamURLs = movie.getFallbackURLs(startingAt: quality)?.compactMap(\.hls), !streamURLs.isEmpty else {
+                PlayerDiagnostics.log(
+                    "make item failed: no stream URLs for quality=\(quality), availableQualities=\(movie.getAvailableQualities())",
+                )
+
                 networkError = PillarboxPlayerError.unavailableStream
                 return nil
             }
+
+            PlayerDiagnostics.log(
+                "make item: selectedQuality=\(quality), availableQualities=\(movie.getAvailableQualities()), fallbackURLs=\(PlayerDiagnostics.urlListDescription(streamURLs)), browserFallback=\(PlayerDiagnostics.browserFallbackDescription(movie.fallback))",
+            )
 
             let metadata = PillarboxPlaybackMetadata(
                 details: details,
@@ -298,24 +334,93 @@ import SwiftUI
                 position: startAt > .zero ? at(CMTime(seconds: startAt, preferredTimescale: 600)) : at(.zero),
             )
 
-            if movie.subtitles.isEmpty {
-                resourceLoader = nil
-                return .simple(url: streamURL, metadata: metadata, configuration: configuration)
-            }
+            guard let loader = PillarboxResourceLoaderDelegate(urls: streamURLs, subtitles: movie.subtitles) else {
+                PlayerDiagnostics.log("make item failed: resource loader could not create playback URL")
 
-            guard let loader = PillarboxResourceLoaderDelegate(m3u8: streamURL, subtitles: movie.subtitles) else {
                 networkError = PillarboxPlayerError.unavailableStream
                 return nil
             }
 
             resourceLoader = loader
+            loader.onManifestFailure = { failedLoader, error in
+                guard resourceLoader === failedLoader else {
+                    PlayerDiagnostics.log("manifest failure ignored: stale resource loader")
+                    return
+                }
+
+                handleManifestFailure(error)
+            }
+            PlayerDiagnostics.log("make item finished: playbackURL=\(PlayerDiagnostics.urlDescription(loader.playbackURL))")
             return .custom(url: loader.playbackURL, delegate: loader, metadata: metadata, configuration: configuration)
+        }
+
+        func handleManifestFailure(_ error: Error?) {
+            PlayerDiagnostics.log(
+                "manifest failure reported to view: attempts=\(manifestRefreshAttempts), error=\(PlayerDiagnostics.errorDescription(error)), currentTime=\(PlayerDiagnostics.secondsDescription(currentResumeTime()))",
+            )
+
+            guard manifestRefreshAttempts == 0 else {
+                networkError = error ?? PillarboxPlayerError.unavailableStream
+                isLoading = false
+                return
+            }
+
+            let resumeTime = currentResumeTime()
+            let autoplay = player.shouldPlay
+            let subtitleLanguage = currentSubtitleLanguage()
+            let oldURLs = movie.getFallbackURLs(startingAt: quality)?.compactMap(\.hls) ?? []
+
+            manifestRefreshAttempts += 1
+            isLoading = true
+            networkError = nil
+
+            PlayerDiagnostics.log(
+                "refresh stream URLs after manifest failure: quality=\(quality), oldURLs=\(PlayerDiagnostics.urlListDescription(oldURLs))",
+            )
+
+            getMovieVideoUseCase(voiceActing: voiceActing, season: season, episode: episode, favs: details.favs)
+                .receive(on: DispatchQueue.main)
+                .sink { completion in
+                    isLoading = false
+
+                    guard case let .failure(error) = completion else { return }
+                    PlayerDiagnostics.log("refresh stream URLs failed: error=\(PlayerDiagnostics.errorDescription(error))")
+                    networkError = error
+                } receiveValue: { refreshedMovie in
+                    isLoading = false
+
+                    if refreshedMovie.needPremium {
+                        PlayerDiagnostics.log("refresh stream URLs returned premium-only movie")
+                        dismiss()
+                        appState.isPremiumPresented = true
+                        return
+                    }
+
+                    movie = refreshedMovie
+                    quality = preferredQuality(for: refreshedMovie, preferred: quality)
+
+                    let refreshedURLs = refreshedMovie.getFallbackURLs(startingAt: quality)?.compactMap(\.hls) ?? []
+                    PlayerDiagnostics.log(
+                        "refresh stream URLs loaded: quality=\(quality), availableQualities=\(refreshedMovie.getAvailableQualities()), newURLs=\(PlayerDiagnostics.urlListDescription(refreshedURLs)), changed=\(oldURLs != refreshedURLs), browserFallback=\(PlayerDiagnostics.browserFallbackDescription(refreshedMovie.fallback))",
+                    )
+
+                    loadCurrentItem(
+                        startAt: resumeTime,
+                        autoplay: autoplay,
+                        preferredSubtitleLanguage: subtitleLanguage,
+                    )
+                }
+                .store(in: &subscriptions)
         }
     }
 
     private extension PillarboxPlayerView {
         func selectEpisode(_ targetSeason: MovieSeason, _ targetEpisode: MovieEpisode) {
             guard targetSeason != season || targetEpisode != episode else { return }
+
+            PlayerDiagnostics.log(
+                "select episode: season=\(targetSeason.seasonId), episode=\(targetEpisode.episodeId), currentTime=\(PlayerDiagnostics.secondsDescription(currentResumeTime())), autoplay=\(player.shouldPlay)",
+            )
 
             let autoplay = player.shouldPlay
             let subtitleLanguage = currentSubtitleLanguage()
@@ -335,9 +440,14 @@ import SwiftUI
                 isLoading = false
 
                 guard case let .failure(error) = completion else { return }
+                PlayerDiagnostics.log("select episode failed: error=\(PlayerDiagnostics.errorDescription(error))")
                 networkError = error
             } receiveValue: { updatedMovie in
                 isLoading = false
+
+                PlayerDiagnostics.log(
+                    "select episode loaded movie: availableQualities=\(updatedMovie.getAvailableQualities()), subtitles=\(updatedMovie.subtitles.count), needPremium=\(updatedMovie.needPremium), browserFallback=\(PlayerDiagnostics.browserFallbackDescription(updatedMovie.fallback))",
+                )
 
                 if updatedMovie.needPremium {
                     dismiss()
@@ -349,6 +459,9 @@ import SwiftUI
                 episode = targetEpisode
                 movie = updatedMovie
                 quality = preferredQuality(for: updatedMovie, preferred: quality)
+                manifestRefreshAttempts = 0
+
+                PlayerDiagnostics.log("select episode applying quality=\(quality)")
 
                 loadCurrentItem(
                     startAt: storedPlaybackPosition(for: targetSeason, targetEpisode),
@@ -504,9 +617,15 @@ import SwiftUI
 
     private extension PillarboxPlayerView {
         func preferredQuality(for movie: MovieVideo, preferred: String) -> String {
-            movie.getAvailableQualities().contains(preferred)
+            let resolvedQuality = movie.getAvailableQualities().contains(preferred)
                 ? preferred
                 : (movie.getAvailableQualities().last ?? preferred)
+
+            PlayerDiagnostics.log(
+                "resolve preferred quality: preferred=\(preferred), resolved=\(resolvedQuality), available=\(movie.getAvailableQualities())",
+            )
+
+            return resolvedQuality
         }
 
         func displaySeasonNumber() -> Int? {
@@ -830,31 +949,42 @@ import SwiftUI
         private let subtitlesScheme = "subtitlesm3u8"
         private let extInfPrefix = "#EXTINF:"
 
-        private let m3u8: URL
+        private let urls: [URL]
         private let subtitles: [MovieSubtitles]
         private let loaderQueue = DispatchQueue(label: "pillarbox.resourceLoader")
 
         private var m3u8String: String?
         private var playlistDuration = 0.0
 
+        var onManifestFailure: ((PillarboxResourceLoaderDelegate, Error?) -> Void)?
+
         let playbackURL: URL
 
-        init?(m3u8: URL, subtitles: [MovieSubtitles]) {
-            guard let playbackURL = m3u8.replacingScheme(with: mainScheme) else {
+        init?(urls: [URL], subtitles: [MovieSubtitles]) {
+            guard let playbackURL = urls.first?.replacingScheme(with: mainScheme) else {
                 return nil
             }
 
-            self.m3u8 = m3u8
+            self.urls = urls
             self.subtitles = subtitles
             self.playbackURL = playbackURL
 
             super.init()
+
+            PlayerDiagnostics.log(
+                "resource loader created: playbackURL=\(PlayerDiagnostics.urlDescription(playbackURL)), streamURLs=\(PlayerDiagnostics.urlListDescription(urls)), subtitles=\(subtitles.count)",
+            )
         }
 
         func resourceLoader(_: AVAssetResourceLoader, shouldWaitForLoadingOfRequestedResource loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
             guard let scheme = loadingRequest.request.url?.scheme else {
+                PlayerDiagnostics.log("resource loader ignored request without scheme")
                 return false
             }
+
+            PlayerDiagnostics.log(
+                "resource loader request: scheme=\(scheme), url=\(PlayerDiagnostics.urlDescription(loadingRequest.request.url))",
+            )
 
             switch scheme {
             case mainScheme:
@@ -864,24 +994,52 @@ import SwiftUI
             case subtitlesScheme:
                 return handleSubtitlesRequest(loadingRequest)
             default:
+                PlayerDiagnostics.log("resource loader ignored unsupported scheme=\(scheme)")
                 return false
             }
         }
 
+        func resourceLoader(_: AVAssetResourceLoader, didCancel loadingRequest: AVAssetResourceLoadingRequest) {
+            PlayerDiagnostics.log(
+                "resource loader cancelled: url=\(PlayerDiagnostics.urlDescription(loadingRequest.request.url))",
+            )
+        }
+
         private func handleMainRequest(_ loadingRequest: AVAssetResourceLoadingRequest) -> Bool {
-            let request = session.request(m3u8, method: .get, headers: [.userAgent(Const.userAgent)])
+            PlayerDiagnostics.log("main manifest request started: fallbackURLs=\(PlayerDiagnostics.urlListDescription(urls))")
+
+            let request = session.request(urls.first!, method: .get, headers: [.userAgent(Const.userAgent)])
                 .validate(statusCode: 200 ..< 400)
+                .interceptor(FallbackInterceptor(urls: urls))
                 .responseString { [weak self] response in
-                    guard let self,
-                          let string = response.value,
-                          !string.isEmpty,
-                          response.error == nil
-                    else {
-                        loadingRequest.finishLoading(with: response.error)
+                    let statusCode = PlayerDiagnostics.statusCodeDescription(response.response?.statusCode)
+                    let responseURL = response.response?.url ?? response.request?.url
+
+                    guard let self else {
+                        loadingRequest.finishLoading(with: response.error ?? PillarboxPlayerError.unavailableStream)
                         return
                     }
 
-                    processPlaylist(string)
+                    guard let string = response.value,
+                          let url = response.request?.url,
+                          !string.isEmpty,
+                          response.error == nil
+                    else {
+                        PlayerDiagnostics.log(
+                            "main manifest failed: status=\(statusCode), responseURL=\(PlayerDiagnostics.urlDescription(responseURL)), error=\(PlayerDiagnostics.errorDescription(response.error))",
+                        )
+                        DispatchQueue.main.async {
+                            self.onManifestFailure?(self, response.error)
+                        }
+                        loadingRequest.finishLoading(with: response.error ?? PillarboxPlayerError.unavailableStream)
+                        return
+                    }
+
+                    PlayerDiagnostics.log(
+                        "main manifest loaded: status=\(statusCode), requestURL=\(PlayerDiagnostics.urlDescription(url)), responseURL=\(PlayerDiagnostics.urlDescription(responseURL)), characters=\(string.count)",
+                    )
+
+                    processPlaylist(string, url)
                     finishMainRequest(loadingRequest)
                 }
 
@@ -893,8 +1051,13 @@ import SwiftUI
             guard let m3u8String,
                   let data = m3u8String.data(using: .utf8)
             else {
+                PlayerDiagnostics.log("fragments request failed: media playlist is empty")
                 return false
             }
+
+            PlayerDiagnostics.log(
+                "fragments playlist served: bytes=\(data.count), duration=\(PlayerDiagnostics.secondsDescription(playlistDuration))",
+            )
 
             loadingRequest.dataRequest?.respond(with: data)
             loadingRequest.finishLoading()
@@ -907,18 +1070,26 @@ import SwiftUI
                   let subtitles = subtitles.first(where: { $0.lang == host }),
                   let data = createSubtitlesPlaylist(withDuration: playlistDuration, subtitles: subtitles).data(using: .utf8)
             else {
+                PlayerDiagnostics.log(
+                    "subtitles request failed: url=\(PlayerDiagnostics.urlDescription(loadingRequest.request.url)), available=\(subtitles.map(\.lang))",
+                )
                 return false
             }
+
+            PlayerDiagnostics.log(
+                "subtitles playlist served: language=\(subtitles.lang), bytes=\(data.count), duration=\(PlayerDiagnostics.secondsDescription(playlistDuration))",
+            )
 
             loadingRequest.dataRequest?.respond(with: data)
             loadingRequest.finishLoading()
             return true
         }
 
-        private func processPlaylist(_ string: String) {
+        private func processPlaylist(_ string: String, _ url: URL) {
             let lines = string.components(separatedBy: .newlines).filter { !$0.isEmpty }
             var newLines: [String] = []
             var iterator = lines.makeIterator()
+            var segmentURLs: [String] = []
 
             playlistDuration = .zero
 
@@ -929,13 +1100,18 @@ import SwiftUI
                     playlistDuration += duration(from: line)
                     let resolvedURL = URL(
                         string: nextLine,
-                        relativeTo: m3u8.pathExtension.isEmpty ? m3u8 : m3u8.deletingLastPathComponent(),
+                        relativeTo: url.pathExtension.isEmpty ? url : url.deletingLastPathComponent(),
                     )?.absoluteString ?? nextLine
                     newLines.append(resolvedURL)
+                    segmentURLs.append(resolvedURL)
                 }
             }
 
             m3u8String = newLines.joined(separator: "\n")
+
+            PlayerDiagnostics.log(
+                "media playlist processed: sourceURL=\(PlayerDiagnostics.urlDescription(url)), lines=\(lines.count), isMaster=\(string.contains("#EXT-X-STREAM-INF")), segments=\(segmentURLs.count), duration=\(PlayerDiagnostics.secondsDescription(playlistDuration)), firstSegment=\(PlayerDiagnostics.segmentDescription(segmentURLs.first)), lastSegment=\(PlayerDiagnostics.segmentDescription(segmentURLs.last))",
+            )
         }
 
         private func duration(from line: String) -> Double {
@@ -946,8 +1122,11 @@ import SwiftUI
 
         private func finishMainRequest(_ loadingRequest: AVAssetResourceLoadingRequest) {
             guard let data = createMainPlaylist().data(using: .utf8) else {
+                PlayerDiagnostics.log("main manifest finish failed: generated master playlist is not UTF-8")
                 return
             }
+
+            PlayerDiagnostics.log("main manifest served to AVPlayer: bytes=\(data.count)")
 
             loadingRequest.dataRequest?.respond(with: data)
             loadingRequest.finishLoading()
@@ -986,6 +1165,100 @@ import SwiftUI
             let language = subtitles.lang.replacingOccurrences(of: "ua", with: "uk")
 
             return "#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID=\"subs\",NAME=\"\(subtitles.name)\",DEFAULT=NO,AUTOSELECT=NO,FORCED=NO,URI=\"subtitlesm3u8://\(subtitles.lang)\",LANGUAGE=\"\(language)\""
+        }
+    }
+
+    private final class FallbackInterceptor: RequestInterceptor, @unchecked Sendable {
+        private let urls: [URL]
+        private let lock = NSLock()
+        private var currentIndex = 0
+
+        init(urls: [URL]) {
+            self.urls = urls
+        }
+
+        func adapt(_ urlRequest: URLRequest, for _: Session, completion: @escaping (Result<URLRequest, Error>) -> Void) {
+            lock.lock()
+            let url = urls[currentIndex]
+            lock.unlock()
+
+            var request = urlRequest
+            request.url = url
+
+            PlayerDiagnostics.log("fallback adapt: index=\(currentIndex), url=\(PlayerDiagnostics.urlDescription(url))")
+
+            completion(.success(request))
+        }
+
+        func retry(_ request: Request, for _: Session, dueTo error: Error, completion: @escaping (RetryResult) -> Void) {
+            lock.lock()
+            defer { lock.unlock() }
+
+            let nextIndex = currentIndex + 1
+
+            guard nextIndex < urls.count else {
+                PlayerDiagnostics.log(
+                    "fallback exhausted: lastIndex=\(currentIndex), status=\(PlayerDiagnostics.statusCodeDescription(request.response?.statusCode)), error=\(PlayerDiagnostics.errorDescription(error))",
+                )
+                completion(.doNotRetry)
+                return
+            }
+
+            PlayerDiagnostics.log(
+                "fallback retry: failedIndex=\(currentIndex), nextIndex=\(nextIndex), status=\(PlayerDiagnostics.statusCodeDescription(request.response?.statusCode)), nextURL=\(PlayerDiagnostics.urlDescription(urls[nextIndex])), error=\(PlayerDiagnostics.errorDescription(error))",
+            )
+
+            currentIndex = nextIndex
+            completion(.retry)
+        }
+    }
+
+    private enum PlayerDiagnostics {
+        static func log(_ message: String) {
+            print("[PillarboxDiagnostics] \(message)")
+        }
+
+        static func urlListDescription(_ urls: [URL]) -> String {
+            urls.enumerated()
+                .map { index, url in "#\(index):\(urlDescription(url))" }
+                .joined(separator: ", ")
+        }
+
+        static func urlDescription(_ url: URL?) -> String {
+            guard let url else { return "nil" }
+
+            let host = url.host ?? "no-host"
+            let path = url.lastPathComponent.isEmpty ? url.path : url.lastPathComponent
+
+            return "\(url.scheme ?? "no-scheme")://\(host)/\(path)"
+        }
+
+        static func segmentDescription(_ segment: String?) -> String {
+            guard let segment, let url = URL(string: segment) else {
+                return segment ?? "nil"
+            }
+
+            return urlDescription(url)
+        }
+
+        static func secondsDescription(_ seconds: Double) -> String {
+            guard seconds.isFinite else { return "invalid" }
+
+            return String(format: "%.3fs", seconds)
+        }
+
+        static func statusCodeDescription(_ statusCode: Int?) -> String {
+            statusCode.map(String.init) ?? "nil"
+        }
+
+        static func errorDescription(_ error: Error?) -> String {
+            error.map { String(describing: $0) } ?? "nil"
+        }
+
+        static func browserFallbackDescription(_ fallback: MovieVideo.BrowserFallback?) -> String {
+            guard let fallback else { return "nil" }
+
+            return "stream=\(urlDescription(fallback.stream)), streamUri=\(fallback.streamUri ?? "nil"), autoswitch=\(fallback.autoswitch), restartHost=\(urlDescription(fallback.restartHost)), geo=\(fallback.geoISO ?? "nil")/\(fallback.geoIP ?? "nil"), tst=\(fallback.tst.map(String.init) ?? "nil")"
         }
     }
 

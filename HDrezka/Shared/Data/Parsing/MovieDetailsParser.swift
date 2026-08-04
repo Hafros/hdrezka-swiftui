@@ -821,7 +821,26 @@ private extension String {
             subtitles: subtitles,
             needPremium: (jsonObject["premium_content"] as? Int ?? 0) == 1,
             thumbnails: jsonObject["thumbnails"] as? String,
+            fallback: getBrowserFallback(from: jsonObject),
         )
+    }
+
+    func getBrowserFallback(from jsonObject: [String: Any]) -> MovieVideo.BrowserFallback? {
+        let stream = (jsonObject["fallbackStream"] as? String).flatMap(URL.init(string:))
+        let streamUri = jsonObject["fallbackStreamUri"] as? String
+        let restartHost = (jsonObject["maybeneedtorestart"] as? String).flatMap(URL.init(string:))
+        let autoswitch = (jsonObject["autoswitch"] as? Int ?? 0) == 1
+        let fallback = MovieVideo.BrowserFallback(
+            stream: stream,
+            streamUri: streamUri,
+            autoswitch: autoswitch,
+            restartHost: restartHost,
+            geoIP: jsonObject["geo_ip"] as? String,
+            geoISO: jsonObject["geo_iso"] as? String,
+            tst: jsonObject["tst"] as? Bool,
+        )
+
+        return fallback.isAvailable ? fallback : nil
     }
 
     func addFlag(_ link: String) -> String {
